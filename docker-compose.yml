@@ -1,0 +1,34 @@
+# Self-host Tailor with its own Postgres: `docker compose up -d --build`.
+# Put it behind HTTPS (Caddy, Traefik, nginx, or your platform's proxy) for real use.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tailor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: tailor
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tailor -d tailor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    # Or skip the build and use a prebuilt image:
+    # image: ghcr.io/<github-user>/tailor:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://tailor:${POSTGRES_PASSWORD}@db:5432/tailor
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
