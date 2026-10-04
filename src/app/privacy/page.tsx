@@ -59,8 +59,8 @@ export default function PrivacyPage() {
       <LegalSection title="What Tailor does not store">
         <ul>
           <li>
-            <strong>Your Gemini API key.</strong> It stays in your browser’s local storage. Each AI request sends it to
-            Tailor’s server, which uses it for that one request and never saves or logs it.
+            <strong>Your Gemini API key.</strong> It stays in your browser. Each AI request sends it to Tailor’s server,
+            which uses it for that one request and never saves or logs it.
           </li>
           <li>No analytics, no advertising, no tracking pixels, no data sold or shared for marketing.</li>
           <li>Tailor does not use your data to train AI models.</li>
@@ -126,8 +126,9 @@ export default function PrivacyPage() {
         </div>
         <p>
           Both are HttpOnly, so scripts on the page can’t read them. On the live site their names start with{" "}
-          <code className="font-mono text-xs">__Secure-</code>. Separately, your browser’s local storage holds your
-          Gemini key. Signing out removes it.
+          <code className="font-mono text-xs">__Secure-</code>. Your Gemini key is kept in your browser: in local
+          storage if you choose “Remember on this device” in Settings, otherwise in session storage, which the browser
+          clears when the tab closes. Signing out removes it either way.
         </p>
       </LegalSection>
 
@@ -166,9 +167,9 @@ export default function PrivacyPage() {
 
       <LegalSection title="Security">
         <p>
-          Connections use HTTPS, sign-in goes through Google, every request checks that you only reach your
-          own data, and AI keys are never stored on the server. No system is perfectly secure; if a breach affects your
-          data, you’ll be told as the law requires.
+          Connections use HTTPS, sign-in goes through Google, every request checks that you only reach your own data,
+          and AI keys are never stored on the server. No system is perfectly secure; if a breach affects your data,
+          you’ll be told as the law requires.
         </p>
       </LegalSection>
 

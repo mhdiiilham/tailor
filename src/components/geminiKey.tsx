@@ -2,36 +2,38 @@
 
 import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
+import { clearKey, KEY_NAME, readKey, writeKey, type KeyStores } from "./keyStorage";
 import { EmptyState } from "./ui";
 
 // The Gemini key lives only in this browser. It's sent with each AI request
-// and never stored on the server.
+// and never stored on the server. See ./keyStorage for where it's kept.
 export const GEMINI_KEY_GUIDE = "https://ai.google.dev/gemini-api/docs/api-key";
-const STORAGE_KEY = "tailor.geminiKey";
 const listeners = new Set<() => void>();
 
-function read(): string {
-  try {
-    return localStorage.getItem(STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
+function stores(): KeyStores {
+  const pick = (name: "localStorage" | "sessionStorage") => {
+    try {
+      return window[name];
+    } catch {
+      return null;
+    }
+  };
+  return { local: pick("localStorage"), session: pick("sessionStorage") };
 }
 
-export function setGeminiKey(value: string): void {
-  try {
-    if (value) localStorage.setItem(STORAGE_KEY, value);
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Storage blocked (private mode); the key just won't persist.
-  }
-  listeners.forEach((l) => l());
+const notify = () => listeners.forEach((l) => l());
+
+// remember: keep it on this device; otherwise only until the tab closes.
+export function setGeminiKey(value: string, remember = true): void {
+  if (value) writeKey(stores(), value, remember);
+  else clearKey(stores());
+  notify();
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
   const onStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) listener();
+    if (e.key === KEY_NAME) listener();
   };
   window.addEventListener("storage", onStorage);
   return () => {
@@ -42,7 +44,20 @@ function subscribe(listener: () => void) {
 
 // null while rendering on the server (unknown), "" when no key is saved.
 export function useGeminiKey(): string | null {
-  return useSyncExternalStore(subscribe, read, () => null);
+  return useSyncExternalStore(
+    subscribe,
+    () => readKey(stores()).key,
+    () => null,
+  );
+}
+
+// Whether the key is kept on this device (true) or only for this tab (false).
+export function useKeyRemembered(): boolean | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => readKey(stores()).remembered,
+    () => null,
+  );
 }
 
 export function GeminiKeyInput() {

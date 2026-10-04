@@ -17,7 +17,7 @@ const principles = [
     tag: "Key stays local",
     title: "Your key stays in your browser",
     body: "It’s sent along with each request, used once, then dropped. The server never saves or logs it.",
-    note: "Kept in your browser’s local storage",
+    note: "Kept in your browser, never on the server",
     icon: Key,
   },
   {
@@ -70,7 +70,7 @@ const security = [
   {
     icon: Key,
     title: "Key never stored",
-    body: "Your Gemini key lives in your browser’s local storage, travels with each request over HTTPS, and is scrubbed from any error the server logs.",
+    body: "Your Gemini key lives only in your browser, travels with each request over HTTPS, and is scrubbed from any error the server logs. On a shared computer, keep it for the tab only.",
   },
   {
     icon: LockSimple,
