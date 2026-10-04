@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
+import { DeleteAccount } from "./deleteAccount";
 import { GeminiKeySettings } from "./geminiKeySettings";
 
 export default async function SettingsPage() {
@@ -8,6 +9,7 @@ export default async function SettingsPage() {
     <div className="grid max-w-2xl gap-10">
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
+      <DeleteAccount />
     </div>
   );
 }

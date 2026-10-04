@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const base =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ui text-sm font-medium transition-[transform,background-color,color,opacity,border-color] active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -10,6 +10,7 @@ const variants: Record<ButtonVariant, string> = {
   primary: "h-10 px-4 bg-accent text-on-accent hover:opacity-90",
   secondary: "h-10 px-4 border border-line bg-raised text-ink hover:border-faint",
   ghost: "p-1.5 text-muted hover:bg-raised hover:text-ink",
+  danger: "h-10 px-4 border border-danger/40 text-danger hover:bg-danger hover:text-surface",
 };
 
 export function buttonClass(variant: ButtonVariant = "primary", className = ""): string {

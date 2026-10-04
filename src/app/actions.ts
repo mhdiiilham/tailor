@@ -1,11 +1,19 @@
 "use server";
 
+import { headers } from "next/headers";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { NoProfileError, NotFoundError } from "@/application/applications";
 import { InvalidApiKeyError, MissingApiKeyError, RateLimitedError, scrubSecret } from "@/domain/errors";
-import { applicationServiceFor, geminiFor, profileRepository } from "@/container";
+import {
+  accountRepository,
+  applicationRecords,
+  applicationServiceFor,
+  geminiFor,
+  profileRepository,
+} from "@/container";
+import { getAuth } from "@/infrastructure/auth/auth";
 import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 
@@ -18,9 +26,7 @@ const KNOWN_ERRORS = [NoProfileError, NotFoundError, MissingApiKeyError, Invalid
 function describe(err: unknown, geminiKey?: string): string {
   let message: string;
   if (err instanceof ZodError) {
-    message = err.issues
-      .map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message))
-      .join("\n");
+    message = err.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("\n");
   } else if (KNOWN_ERRORS.some((E) => err instanceof E)) {
     message = (err as Error).message;
   } else {
@@ -100,4 +106,27 @@ export async function testGeminiKey(key: string): Promise<ActionState> {
     return { error: describe(err, key) };
   }
   return { notice: "Key works." };
+}
+
+export async function deleteApplication(id: number): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    if (!(await applicationRecords().delete(user.id, id))) return { error: "That application no longer exists." };
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  redirect("/");
+}
+
+// Removes the account and, through cascades, the profile and every application.
+export async function deleteAccount(): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    // Sign out first so the session cookie is cleared along with the session.
+    await getAuth().api.signOut({ headers: await headers() });
+    await accountRepository().deleteUser(user.id);
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  return { notice: "Your account and all its data are deleted." };
 }

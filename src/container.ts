@@ -1,13 +1,24 @@
 import "server-only";
 import { ApplicationService } from "@/application/applications";
+import { ApplicationRecords } from "@/application/records";
 import { MissingApiKeyError } from "@/domain/errors";
 import { getDb } from "@/infrastructure/db/instance";
-import { DrizzleApplicationRepository, DrizzleProfileRepository } from "@/infrastructure/db/repositories";
+import {
+  DrizzleAccountRepository,
+  DrizzleApplicationRepository,
+  DrizzleProfileRepository,
+} from "@/infrastructure/db/repositories";
 import { GeminiLlm, geminiModelsFromEnv } from "@/infrastructure/llm/geminiLlm";
 import { TypstResumeRenderer } from "@/infrastructure/typst/typstRenderer";
 
 export const profileRepository = () => new DrizzleProfileRepository(getDb());
 export const applicationRepository = () => new DrizzleApplicationRepository(getDb());
+export const accountRepository = () => new DrizzleAccountRepository(getDb());
+const renderer = () => new TypstResumeRenderer(process.env.TYPST_BIN ?? "typst");
+
+// Stored resumes: PDF downloads, deletion and expiry. Needs no Gemini key.
+export const applicationRecords = () =>
+  new ApplicationRecords({ applications: applicationRepository(), renderer: renderer() });
 
 // The key comes from the browser with each request and lives only as long as it.
 export function geminiFor(geminiKey: string): GeminiLlm {
@@ -22,6 +33,6 @@ export function applicationServiceFor(userId: string, geminiKey: string): Applic
     llm: geminiFor(geminiKey),
     profiles: profileRepository(),
     applications: applicationRepository(),
-    renderer: new TypstResumeRenderer(process.env.TYPST_BIN ?? "typst"),
+    renderer: renderer(),
   });
 }

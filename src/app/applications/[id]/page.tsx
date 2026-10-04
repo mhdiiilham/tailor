@@ -6,6 +6,7 @@ import { LOW_FIT_THRESHOLD, type FitAnalysis, type Match } from "@/domain/fit";
 import { resumeFileName } from "@/domain/slug";
 import { requireUser } from "@/infrastructure/auth/session";
 import { ButtonAnchor, Card, PageHeader, SectionHeader } from "@/components/ui";
+import { DeleteApplication } from "./deleteApplication";
 import { QuestionsForm, ReviseForm } from "./forms";
 
 export const dynamic = "force-dynamic";
@@ -126,6 +127,9 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             <div className="grid gap-3">
               <ButtonAnchor href={`/applications/${app.id}/pdf?download=pdf`}>Download PDF</ButtonAnchor>
               <p className="break-all font-mono text-xs text-faint">{fileName}</p>
+              <p className="text-xs text-faint">
+                The stored PDF is deleted from the server 24 hours after it’s made. Downloading later rebuilds it.
+              </p>
               <a
                 href={`/applications/${app.id}/pdf?download=typ`}
                 className="text-sm text-muted underline hover:text-ink"
@@ -155,6 +159,10 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           </aside>
         </section>
       )}
+
+      <section className="border-t border-line pt-8">
+        <DeleteApplication id={app.id} />
+      </section>
     </div>
   );
 }
