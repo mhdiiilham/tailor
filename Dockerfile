@@ -43,6 +43,8 @@ ENV NODE_ENV=production \
 COPY --from=typst /usr/local/bin/typst /usr/local/bin/typst
 COPY --from=typst /opt/typst /opt/typst
 COPY --from=build --chown=node:node /app/.next/standalone ./
+# Standalone output leaves out public/ (logo, icons, sample resume), so copy it alongside.
+COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 
