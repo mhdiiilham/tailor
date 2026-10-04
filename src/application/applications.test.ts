@@ -52,12 +52,12 @@ const resume: TailoredResume = {
 
 class MemoryProfiles implements ProfileRepository {
   constructor(private stored: Profile | null) {}
-  async findDefault() {
-    return this.stored ? { id: 1, profile: this.stored, updatedAt: new Date() } : null;
+  async findByUser(userId: string) {
+    return this.stored && userId === "alice" ? { profile: this.stored, updatedAt: new Date() } : null;
   }
-  async saveDefault(p: Profile) {
+  async saveForUser(_userId: string, p: Profile) {
     this.stored = p;
-    return { id: 1, profile: p, updatedAt: new Date() };
+    return { profile: p, updatedAt: new Date() };
   }
 }
 
@@ -68,14 +68,14 @@ class MemoryApplications implements ApplicationRepository {
     this.rows.push(row);
     return row;
   }
-  async findById(id: number) {
-    return this.rows.find((r) => r.id === id) ?? null;
+  async findById(userId: string, id: number) {
+    return this.rows.find((r) => r.id === id && r.userId === userId) ?? null;
   }
-  async list() {
-    return this.rows;
+  async list(userId: string) {
+    return this.rows.filter((r) => r.userId === userId);
   }
-  async update(id: number, patch: Partial<NewApplication>) {
-    const i = this.rows.findIndex((r) => r.id === id);
+  async update(userId: string, id: number, patch: Partial<NewApplication>) {
+    const i = this.rows.findIndex((r) => r.id === id && r.userId === userId);
     this.rows[i] = { ...this.rows[i], ...patch };
     return this.rows[i];
   }
@@ -85,15 +85,15 @@ class RecordingRenderer implements ResumeRenderer {
   rendered: TailoredResume[] = [];
   async render({ resume }: { resume: TailoredResume }) {
     this.rendered.push(resume);
-    return { typPath: "/out/cv.typ", pdfPath: "/out/cv.pdf" };
+    return { typSource: "= cv", pdf: Buffer.from("%PDF") };
   }
 }
 
-function setup(responses: unknown[], stored: Profile | null = profile) {
+function setup(responses: unknown[], stored: Profile | null = profile, userId = "alice") {
   const llm = new FakeLlm(responses);
   const applications = new MemoryApplications();
   const renderer = new RecordingRenderer();
-  const service = new ApplicationService({ llm, profiles: new MemoryProfiles(stored), applications, renderer });
+  const service = new ApplicationService({ userId, llm, profiles: new MemoryProfiles(stored), applications, renderer });
   return { llm, applications, renderer, service };
 }
 
@@ -105,10 +105,16 @@ describe("ApplicationService.start", () => {
 
     expect(app.company).toBe("Acme");
     expect(app.status).toBe("questions");
+    expect(app.userId).toBe("alice");
     // 50*0.4 + 100*0.25 + 80*0.2 + 100*0.1 + 60*0.05 = 74
     expect(app.fit.score).toBe(74);
     expect(app.questions.map((q) => q.id)).toEqual(["lead", "tone", "gap1", "gap2"]);
     expect(llm.requests.every((r) => r.tier === "fast")).toBe(true);
+  });
+
+  it("does not use another user's profile", async () => {
+    const { service } = setup([], profile, "bob");
+    await expect(service.start("jd")).rejects.toBeInstanceOf(NoProfileError);
   });
 
   it("requires a profile", async () => {
@@ -129,7 +135,8 @@ describe("ApplicationService.generate", () => {
     expect(tailorRequest.prompt).toContain("A: The latency win");
     expect(tailorRequest.prompt).toContain("A: (no answer)");
     expect(renderer.rendered[0].summary).toBe("Backend engineer, Go.");
-    expect(done).toMatchObject({ status: "generated", pdfPath: "/out/cv.pdf", answers: { lead: "The latency win" } });
+    expect(done).toMatchObject({ status: "generated", typSource: "= cv", answers: { lead: "The latency win" } });
+    expect(done.pdf?.toString()).toBe("%PDF");
   });
 
   it("asks once more when the draft uses banned words", async () => {

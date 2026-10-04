@@ -18,27 +18,23 @@ export interface LlmPort {
   generateObject<T>(req: GenerateObjectRequest<T>): Promise<T>;
 }
 
-export type StoredProfile = { id: number; profile: Profile; updatedAt: Date };
+export type StoredProfile = { profile: Profile; updatedAt: Date };
 
+// Every method is scoped to one user; another user's data is never visible.
 export interface ProfileRepository {
-  findDefault(): Promise<StoredProfile | null>;
-  saveDefault(profile: Profile): Promise<StoredProfile>;
+  findByUser(userId: string): Promise<StoredProfile | null>;
+  saveForUser(userId: string, profile: Profile): Promise<StoredProfile>;
 }
 
 export interface ApplicationRepository {
   create(app: NewApplication): Promise<Application>;
-  findById(id: number): Promise<Application | null>;
-  list(): Promise<Application[]>;
-  update(id: number, patch: Partial<NewApplication>): Promise<Application>;
+  findById(userId: string, id: number): Promise<Application | null>;
+  list(userId: string): Promise<Application[]>;
+  update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application>;
 }
 
-export type RenderedResume = { typPath: string; pdfPath: string };
+export type RenderedResume = { typSource: string; pdf: Buffer };
 
 export interface ResumeRenderer {
-  render(input: {
-    profile: Profile;
-    resume: TailoredResume;
-    company: string;
-    role: string;
-  }): Promise<RenderedResume>;
+  render(input: { profile: Profile; resume: TailoredResume }): Promise<RenderedResume>;
 }

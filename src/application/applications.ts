@@ -28,6 +28,7 @@ export class NotFoundError extends Error {}
 const GapQuestionsSchema = z.object({ questions: z.array(z.string()).max(MAX_GAP_QUESTIONS) });
 
 export type ApplicationDeps = {
+  userId: string;
   llm: LlmPort;
   profiles: ProfileRepository;
   applications: ApplicationRepository;
@@ -39,8 +40,8 @@ export class ApplicationService {
 
   // Paste a JD: extract it, score the fit, and prepare clarifying questions.
   async start(jdText: string): Promise<Application> {
-    const { llm, applications } = this.deps;
-    const { id: profileId, profile } = await this.requireProfile();
+    const { llm, applications, userId } = this.deps;
+    const { profile } = await this.requireProfile();
     const profileYaml = profileContext(profile);
 
     const job = await llm.generateObject({
@@ -70,7 +71,7 @@ export class ApplicationService {
     ];
 
     return applications.create({
-      profileId,
+      userId,
       company: job.company || "Unknown company",
       role: job.role || "Unknown role",
       jdText,
@@ -79,7 +80,8 @@ export class ApplicationService {
       questions,
       answers: null,
       resume: null,
-      pdfPath: null,
+      typSource: null,
+      pdf: null,
       status: "questions",
     });
   }
@@ -141,18 +143,18 @@ export class ApplicationService {
     resume: TailoredResume,
     patch: { answers?: Answers },
   ): Promise<Application> {
-    const { pdfPath } = await this.deps.renderer.render({ profile, resume, company: app.company, role: app.role });
-    return this.deps.applications.update(app.id, { ...patch, resume, pdfPath, status: "generated" });
+    const { typSource, pdf } = await this.deps.renderer.render({ profile, resume });
+    return this.deps.applications.update(this.deps.userId, app.id, { ...patch, resume, typSource, pdf, status: "generated" });
   }
 
   private async requireProfile(): Promise<StoredProfile> {
-    const stored = await this.deps.profiles.findDefault();
+    const stored = await this.deps.profiles.findByUser(this.deps.userId);
     if (!stored) throw new NoProfileError();
     return stored;
   }
 
   private async requireApplication(id: number): Promise<Application> {
-    const app = await this.deps.applications.findById(id);
+    const app = await this.deps.applications.findById(this.deps.userId, id);
     if (!app) throw new NotFoundError(`Application ${id} not found.`);
     return app;
   }

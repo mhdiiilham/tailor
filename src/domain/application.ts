@@ -7,7 +7,7 @@ export type ApplicationStatus = "questions" | "generated";
 
 export type Application = {
   id: number;
-  profileId: number;
+  userId: string;
   company: string;
   role: string;
   jdText: string;
@@ -16,7 +16,8 @@ export type Application = {
   questions: Question[];
   answers: Answers | null;
   resume: TailoredResume | null;
-  pdfPath: string | null;
+  typSource: string | null;
+  pdf: Buffer | null;
   status: ApplicationStatus;
   createdAt: Date;
 };
