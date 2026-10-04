@@ -1,6 +1,6 @@
 # Tailor
 
-Paste a job description, answer a few questions, download a tailored one-page resume PDF. A web version of the `/tailored` workflow, for a small invite-only group.
+Paste a job description, answer a few questions, download a tailored one-page resume PDF. A web version of the `/tailored` resume workflow, for a small invite-only group.
 
 - **Sign in with Google**, limited to the emails in `ALLOWED_EMAILS`.
 - **Bring your own key:** each person adds their own Gemini API key in Settings. It's kept in that browser's `localStorage`, sent with each AI request, and never stored on the server. Guide: https://ai.google.dev/gemini-api/docs/api-key
@@ -27,7 +27,7 @@ npm run dev                  # http://localhost:3000, migrations run on start
 
 ## Deploy on Coolify
 
-The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on every push to `main` that touches `app/`. It runs typecheck, lint and tests, then pushes `ghcr.io/<github-user>/tailor:latest` (plus a `sha-xxxxxxx` tag). Coolify only pulls and runs it.
+The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on every push to `main`. It runs typecheck, lint and tests, then pushes `ghcr.io/<github-user>/tailor:latest` (plus a `sha-xxxxxxx` tag). Coolify only pulls and runs it.
 
 1. Push to `main` once so the image exists. If the GitHub package is private, log the Coolify server in to GHCR with a token that has `read:packages`:
    `echo <token> | docker login ghcr.io -u <github-user> --password-stdin`
@@ -50,7 +50,7 @@ Two Gemini models: `GEMINI_MODEL_FAST` (job extraction, fit analysis, questions)
 src/domain/          entities, schemas, fit scoring, allowlist, errors, ports (no framework code)
 src/application/     ApplicationService: start, generate, revise (per user)
 src/infrastructure/  Postgres (Drizzle), Better Auth, Gemini adapter, Typst renderer, YAML parsing
-src/prompts/         prompts adapted from .claude/skills/tailored/SKILL.md
+src/prompts/         prompts adapted from the /tailored Claude Code skill
 src/components/ui/   Button, Card, EmptyState, Field, TextArea, PageHeader, ...
 src/app/             pages, server actions, auth/health/PDF routes
 ```
