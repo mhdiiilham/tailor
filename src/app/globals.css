@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* One palette: zinc neutrals, one cobalt accent (same as the resume PDF). */
+:root {
+  --surface: #fafafa;
+  --surface-raised: #ffffff;
+  --line: #e4e4e7;
+  --ink: #18181b;
+  --muted: #52525b;
+  --faint: #71717a;
+  --accent: #26428b;
+  --accent-soft: #e8edf8;
+  --on-accent: #fafafa;
+  --danger: #9f1d2b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #0f0f11;
+    --surface-raised: #18181b;
+    --line: #2e2e33;
+    --ink: #f4f4f5;
+    --muted: #b4b4bb;
+    --faint: #8e8e96;
+    --accent: #93acf0;
+    --accent-soft: #1b2440;
+    --on-accent: #0f0f11;
+    --danger: #f2a1a9;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-ui: 8px;
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
