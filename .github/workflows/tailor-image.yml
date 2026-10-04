@@ -16,21 +16,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install Typst
-        run: |
-          curl -fsSL https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ -C /tmp
-          sudo mv /tmp/typst-*/typst /usr/local/bin/typst
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm run lint
-      - run: npm test
+    uses: ./.github/workflows/ci.yml
 
   image:
     needs: test
@@ -71,4 +57,5 @@ jobs:
     steps:
       - name: Trigger Coolify redeploy
         if: env.COOLIFY_WEBHOOK != ''
-        run: curl -fsS -X GET "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"
+        run: |
+          curl -fsS -X GET "$COOLIFY_WEBHOOK" -H "Authorization: Bearer $COOLIFY_TOKEN"

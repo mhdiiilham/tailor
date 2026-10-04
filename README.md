@@ -147,6 +147,10 @@ npm run lint
 
 Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generate` to create a migration in `drizzle/`.
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and every branch push: typecheck, lint, tests (with Typst installed, so PDF rendering is tested for real), a check that migrations match the schema, and a production build. On `main` the image workflow runs the same checks before building and pushing the image.
+
 ## How it works
 
 1. **Paste a job description.** A quick check in the browser shows which tech it mentions is or isn't in your profile.

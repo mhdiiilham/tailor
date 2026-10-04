@@ -1,0 +1,59 @@
+# Checks every pull request and every branch push. The image workflow reuses it
+# for main, so main is checked before an image is built.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # The renderer tests compile real PDFs; same Typst version as the Docker image.
+      - name: Install Typst
+        run: |
+          curl -fsSL https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ -C /tmp
+          sudo mv /tmp/typst-*/typst /usr/local/bin/typst
+          typst --version
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and repository tests
+        run: npm test
+
+      # Fails if schema.ts changed without running `npm run db:generate`.
+      - name: Migrations match the schema
+        run: |
+          npx drizzle-kit generate --name ci-check
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::src/infrastructure/db/schema.ts has changes without a migration. Run 'npm run db:generate' and commit drizzle/."
+            git status --porcelain drizzle
+            exit 1
+          fi
+
+      - name: Production build
+        run: npm run build
