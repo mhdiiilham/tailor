@@ -18,7 +18,7 @@ export default function TermsPage() {
       <LegalSection title="Who can use Tailor">
         <ul>
           <li>You must be at least 18 years old.</li>
-          <li>Tailor is invite-only. You need a Google account whose email is on the invite list.</li>
+          <li>You need a Google account to sign in. The operator may limit sign-in to certain email addresses.</li>
           <li>Use it for your own job applications, with your own information.</li>
         </ul>
       </LegalSection>

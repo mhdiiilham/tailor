@@ -2,7 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
 // The landing and legal pages, health check and auth endpoints are public; everything else needs a session.
-const PUBLIC_PATHS = ["/", "/privacy", "/terms", "/api/health"];
+const PUBLIC_PATHS = ["/", "/privacy", "/terms", "/api/health", "/sample-resume.pdf"];
 const isPublic = (path: string) => PUBLIC_PATHS.includes(path) || path.startsWith("/api/auth");
 
 // A fresh nonce per request lets Next's own inline scripts run while blocking

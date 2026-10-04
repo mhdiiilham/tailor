@@ -23,6 +23,15 @@ describe("isAllowed", () => {
     expect(isAllowed(undefined, list)).toBe(false);
   });
 
+  it("lets any account in with *", () => {
+    expect(isAllowed("stranger@example.com", parseAllowlist("*"))).toBe(true);
+    expect(isAllowed("stranger@example.com", parseAllowlist("me@example.com, *"))).toBe(true);
+  });
+
+  it("still needs an email with *", () => {
+    expect(isAllowed(undefined, parseAllowlist("*"))).toBe(false);
+  });
+
   it("rejects everyone when the list is empty", () => {
     expect(isAllowed("me@example.com", [])).toBe(false);
   });

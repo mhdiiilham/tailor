@@ -7,11 +7,11 @@ import { Button } from "@/components/ui";
 import { authClient } from "@/infrastructure/auth/authClient";
 
 // Sign-in is only possible after confirming age and accepting the terms.
-export function GoogleButton() {
+export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
   const [agreed, setAgreed] = useState(false);
   const [pending, setPending] = useState(false);
   return (
-    <div className="grid justify-items-start gap-4">
+    <div className={`grid gap-4 ${fullWidth ? "" : "justify-items-start"}`}>
       <label className="flex max-w-[52ch] cursor-pointer items-start gap-3 text-sm text-muted">
         <input
           type="checkbox"
@@ -32,6 +32,7 @@ export function GoogleButton() {
         </span>
       </label>
       <Button
+        className={fullWidth ? "w-full" : undefined}
         disabled={!agreed || pending}
         onClick={async () => {
           setPending(true);

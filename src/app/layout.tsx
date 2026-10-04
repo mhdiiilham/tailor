@@ -50,7 +50,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 </nav>
                 <UserMenu name={user.name} image={user.image} />
               </div>
-            ) : null}
+            ) : (
+              <nav className="flex items-center gap-1 text-sm">
+                <Link href="/#how" className="hidden rounded-ui px-3 py-1.5 text-muted hover:text-ink sm:block">
+                  How it works
+                </Link>
+                <Link href="/#security" className="hidden rounded-ui px-3 py-1.5 text-muted hover:text-ink sm:block">
+                  Security
+                </Link>
+                <Link
+                  href="/#signin"
+                  className="rounded-ui border border-line px-3 py-1.5 text-ink transition-colors hover:bg-raised"
+                >
+                  Sign in
+                </Link>
+              </nav>
+            )}
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8 md:py-12">{children}</main>

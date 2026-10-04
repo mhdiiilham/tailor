@@ -166,7 +166,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Security">
         <p>
-          Connections use HTTPS, sign-in is limited to invited accounts, every request checks that you only reach your
+          Connections use HTTPS, sign-in goes through Google, every request checks that you only reach your
           own data, and AI keys are never stored on the server. No system is perfectly secure; if a breach affects your
           data, you’ll be told as the law requires.
         </p>

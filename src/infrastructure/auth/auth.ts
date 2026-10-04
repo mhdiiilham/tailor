@@ -22,7 +22,7 @@ function createAuth() {
     databaseHooks: {
       user: {
         create: {
-          // Invite-only: nobody outside ALLOWED_EMAILS gets an account.
+          // Only emails in ALLOWED_EMAILS (or anyone, with "*") get an account.
           before: async (user) => isAllowed(user.email, allowlist()),
         },
       },

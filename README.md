@@ -4,7 +4,7 @@ Paste a job description, answer a few questions, and download a one-page resume 
 
 - **Bring your own key.** Each person adds their own Gemini API key in Settings. It stays in their browser and is sent with each AI request; the server never stores it.
 - **Nothing invented.** The AI picks and rewrites from your profile only. Titles, companies and dates are copied from it, never generated.
-- **Invite-only.** Google sign-in, limited to the emails you allow.
+- **Open or private.** Google sign-in, open to anyone or limited to the emails you list.
 - **Small footprint.** One Next.js container, one Postgres database, Typst for the PDFs.
 
 This README is for running your own copy.
@@ -53,7 +53,7 @@ Copy `.env.example` to `.env` (Docker) or `.env.local` (local development) and f
 | `BETTER_AUTH_URL` | yes | Public URL of your instance, e.g. `https://tailor.example.com`. No trailing slash. |
 | `GOOGLE_CLIENT_ID` | yes | From step 1. |
 | `GOOGLE_CLIENT_SECRET` | yes | From step 1. |
-| `ALLOWED_EMAILS` | yes | Comma-separated emails that may sign in. Anyone else is refused, even with a valid Google account. After removing an email and restarting, that person is locked out. |
+| `ALLOWED_EMAILS` | yes | Who may sign in. `*` lets anyone with a Google account in. Otherwise a comma-separated list of emails; everyone else is refused. Empty means nobody, so a missing value never opens the app by accident. Changes apply after a restart. |
 | `DATABASE_URL` | yes | Postgres connection string. Docker Compose sets it for you. |
 | `POSTGRES_PASSWORD` | Compose only | Password for the bundled Postgres in `docker-compose.yml`. |
 | `GEMINI_MODEL_FAST` | no | Model for reading the job post, fit analysis and questions. Default `gemini-flash-lite-latest`. |
@@ -125,7 +125,7 @@ Then build your own image. A prebuilt image from someone else carries their deta
 - **Backups:** back up Postgres, for example with `pg_dump` or your platform's scheduled backups. That's the only state. PDFs are stored in the database and deleted after 24 hours anyway.
 - **Health:** `GET /api/health` returns `{"status":"ok"}` when the database answers.
 - **Logs:** each Gemini call logs the model, input and output tokens, and duration (`[llm] ...`). The PDF cleanup logs `[retention] ...`. Gemini keys are scrubbed from error logs.
-- **Users:** add or remove people by editing `ALLOWED_EMAILS` and restarting. People can delete their own account and all its data in Settings.
+- **Users:** open sign-up with `ALLOWED_EMAILS=*`, or list emails and restart to add or remove people. People can delete their own account and all its data in Settings.
 - **Cost:** on Gemini's free tier, nothing. On a paid key a resume costs a few cents. Each user pays for their own key.
 
 ## Develop locally
