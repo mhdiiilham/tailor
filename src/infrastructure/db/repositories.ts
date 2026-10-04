@@ -9,17 +9,16 @@ export class DrizzleProfileRepository implements ProfileRepository {
   constructor(private readonly db: Db) {}
 
   async findByUser(userId: string): Promise<StoredProfile | null> {
-    const row = this.db.select().from(profiles).where(eq(profiles.userId, userId)).get();
+    const [row] = await this.db.select().from(profiles).where(eq(profiles.userId, userId));
     return row ? { profile: row.data, updatedAt: row.updatedAt } : null;
   }
 
   async saveForUser(userId: string, profile: Profile): Promise<StoredProfile> {
     const updatedAt = new Date();
-    this.db
+    await this.db
       .insert(profiles)
       .values({ userId, data: profile, updatedAt })
-      .onConflictDoUpdate({ target: profiles.userId, set: { data: profile, updatedAt } })
-      .run();
+      .onConflictDoUpdate({ target: profiles.userId, set: { data: profile, updatedAt } });
     return { profile, updatedAt };
   }
 }
@@ -28,39 +27,28 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Db) {}
 
   async create(app: NewApplication): Promise<Application> {
-    return this.db
-      .insert(applications)
-      .values({ ...app, createdAt: new Date() })
-      .returning()
-      .get();
+    const [row] = await this.db.insert(applications).values(app).returning();
+    return row;
   }
 
   async findById(userId: string, id: number): Promise<Application | null> {
-    return (
-      this.db
-        .select()
-        .from(applications)
-        .where(and(eq(applications.id, id), eq(applications.userId, userId)))
-        .get() ?? null
-    );
+    const [row] = await this.db
+      .select()
+      .from(applications)
+      .where(and(eq(applications.id, id), eq(applications.userId, userId)));
+    return row ?? null;
   }
 
   async list(userId: string): Promise<Application[]> {
-    return this.db
-      .select()
-      .from(applications)
-      .where(eq(applications.userId, userId))
-      .orderBy(desc(applications.id))
-      .all();
+    return this.db.select().from(applications).where(eq(applications.userId, userId)).orderBy(desc(applications.id));
   }
 
   async update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application> {
-    const row = this.db
+    const [row] = await this.db
       .update(applications)
       .set(patch)
       .where(and(eq(applications.id, id), eq(applications.userId, userId)))
-      .returning()
-      .get();
+      .returning();
     if (!row) throw new Error(`application ${id} not found`);
     return row;
   }

@@ -1,16 +1,19 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import path from "node:path";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
-export type Db = ReturnType<typeof openDb>;
+// Any Postgres driver Drizzle supports: node-postgres in the app, PGlite in tests.
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-export function openDb(file: string) {
-  const sqlite = new Database(file);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-  const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
-  return db;
+export const migrationsFolder = path.join(process.cwd(), "drizzle");
+
+export function openDb(connectionString: string) {
+  return drizzle(new Pool({ connectionString, max: 5 }), { schema });
+}
+
+export async function migrateDb(db: ReturnType<typeof openDb>): Promise<void> {
+  await migrate(db, { migrationsFolder });
 }

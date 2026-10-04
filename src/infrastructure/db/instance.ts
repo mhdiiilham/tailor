@@ -1,17 +1,14 @@
 import "server-only";
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-import { openDb, type Db } from "./client";
+import { openDb } from "./client";
 
-// One connection per server process. Next dev reloads modules, so keep it on globalThis.
-const g = globalThis as unknown as { __db?: Db };
+// One pool per server process. Next dev reloads modules, so keep it on globalThis.
+const g = globalThis as unknown as { __db?: ReturnType<typeof openDb> };
 
-export function getDb(): Db {
+export function getDb() {
   if (!g.__db) {
-    const file = process.env.DATABASE_URL ?? "./data/career.db";
-    // The DB path is runtime config, not a project file, so keep it out of build tracing.
-    mkdirSync(path.dirname(path.resolve(/*turbopackIgnore: true*/ file)), { recursive: true });
-    g.__db = openDb(file);
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("DATABASE_URL is not set.");
+    g.__db = openDb(url);
   }
   return g.__db;
 }

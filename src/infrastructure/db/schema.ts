@@ -1,29 +1,36 @@
-import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { boolean, customType, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import type { FitAnalysis } from "@/domain/fit";
 import type { JobPosting } from "@/domain/job";
 import type { Profile } from "@/domain/profile";
 import type { Answers, Question } from "@/domain/questions";
 import type { TailoredResume } from "@/domain/resume";
 
-const timestamp = (name: string) => integer(name, { mode: "timestamp" });
+// Drizzle has no built-in bytea column; PDFs are stored as raw bytes.
+const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+  // node-postgres returns a Buffer, PGlite a Uint8Array; normalize to Buffer.
+  fromDriver: (value) => Buffer.from(value),
+});
+
+const ts = (name: string) => timestamp(name, { withTimezone: true });
 
 // Better Auth core tables. Field names match what its Drizzle adapter expects.
-export const user = sqliteTable("user", {
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 
-export const session = sqliteTable("session", {
+export const session = pgTable("session", {
   id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
+  expiresAt: ts("expires_at").notNull(),
   token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id")
@@ -31,7 +38,7 @@ export const session = sqliteTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const account = sqliteTable("account", {
+export const account = pgTable("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -41,49 +48,49 @@ export const account = sqliteTable("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  accessTokenExpiresAt: ts("access_token_expires_at"),
+  refreshTokenExpiresAt: ts("refresh_token_expires_at"),
   scope: text("scope"),
   password: text("password"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull(),
 });
 
-export const verification = sqliteTable("verification", {
+export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 
-// App tables. JSON columns hold whole domain documents; on Postgres these become jsonb.
-export const profiles = sqliteTable("profiles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+// App tables. Whole domain documents live in jsonb columns.
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .unique()
     .references(() => user.id, { onDelete: "cascade" }),
-  data: text("data", { mode: "json" }).$type<Profile>().notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
+  data: jsonb("data").$type<Profile>().notNull(),
+  updatedAt: ts("updated_at").notNull(),
 });
 
-export const applications = sqliteTable("applications", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const applications = pgTable("applications", {
+  id: serial("id").primaryKey(),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   company: text("company").notNull(),
   role: text("role").notNull(),
   jdText: text("jd_text").notNull(),
-  job: text("job", { mode: "json" }).$type<JobPosting>().notNull(),
-  fit: text("fit", { mode: "json" }).$type<FitAnalysis>().notNull(),
-  questions: text("questions", { mode: "json" }).$type<Question[]>().notNull(),
-  answers: text("answers", { mode: "json" }).$type<Answers>(),
-  resume: text("resume", { mode: "json" }).$type<TailoredResume>(),
+  job: jsonb("job").$type<JobPosting>().notNull(),
+  fit: jsonb("fit").$type<FitAnalysis>().notNull(),
+  questions: jsonb("questions").$type<Question[]>().notNull(),
+  answers: jsonb("answers").$type<Answers>(),
+  resume: jsonb("resume").$type<TailoredResume>(),
   typSource: text("typ_source"),
-  pdf: blob("pdf", { mode: "buffer" }),
+  pdf: bytea("pdf"),
   status: text("status", { enum: ["questions", "generated"] }).notNull(),
-  createdAt: timestamp("created_at").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
 });

@@ -3,10 +3,7 @@
 FROM node:24-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Dependencies (better-sqlite3 compiles a native module).
 FROM base AS deps
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -41,7 +38,6 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATABASE_URL=/data/career.db \
     TYPST_PACKAGE_CACHE_PATH=/opt/typst/packages
 
 COPY --from=typst /usr/local/bin/typst /usr/local/bin/typst
@@ -50,10 +46,7 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 
-# Mount a persistent volume here. It holds the SQLite database (migrations run on start).
-RUN mkdir -p /data && chown node:node /data
-VOLUME /data
-
+# DATABASE_URL (Postgres) is required at runtime; migrations run on start.
 USER node
 EXPOSE 3000
 

@@ -11,7 +11,7 @@ export const allowlist = () => parseAllowlist(process.env.ALLOWED_EMAILS);
 function createAuth() {
   return betterAuth({
     // BETTER_AUTH_SECRET and BETTER_AUTH_URL are read from the environment.
-    database: drizzleAdapter(getDb(), { provider: "sqlite", schema }),
+    database: drizzleAdapter(getDb(), { provider: "pg", schema }),
     socialProviders: {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID ?? "",

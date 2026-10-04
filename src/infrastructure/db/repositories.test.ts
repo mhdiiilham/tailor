@@ -1,20 +1,17 @@
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { NewApplication } from "@/domain/application";
 import { ProfileSchema } from "@/domain/profile";
-import { openDb, type Db } from "./client";
+import type { Db } from "./client";
 import { DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
 import { user } from "./schema";
+import { openTestDb } from "./testDb";
 
 const profile = ProfileSchema.parse({ personal: { name: "Ada" } });
 
 let db: Db;
 
-function addUser(id: string) {
-  const now = new Date();
-  db.insert(user).values({ id, name: id, email: `${id}@example.com`, createdAt: now, updatedAt: now }).run();
+async function addUser(id: string) {
+  await db.insert(user).values({ id, name: id, email: `${id}@example.com` });
 }
 
 const newApp = (userId: string): NewApplication => ({
@@ -38,10 +35,10 @@ const newApp = (userId: string): NewApplication => ({
   status: "questions",
 });
 
-beforeEach(() => {
-  db = openDb(path.join(mkdtempSync(path.join(tmpdir(), "db-")), "test.db"));
-  addUser("alice");
-  addUser("bob");
+beforeEach(async () => {
+  db = await openTestDb();
+  await addUser("alice");
+  await addUser("bob");
 });
 
 describe("DrizzleProfileRepository", () => {

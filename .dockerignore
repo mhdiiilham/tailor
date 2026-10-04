@@ -1,8 +1,5 @@
 node_modules
 .next
-data
-*.db
-*.db-*
 .env*
 !.env.example
 Dockerfile

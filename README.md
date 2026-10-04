@@ -13,7 +13,8 @@ Requires Node 22+ and [Typst](https://typst.app) (`brew install typst`).
 ```bash
 npm install
 cp .env.example .env.local   # fill in auth settings (see Google OAuth below)
-npm run dev                  # http://localhost:3000
+docker run -d --name tailor-pg -p 5432:5432 -e POSTGRES_USER=tailor -e POSTGRES_PASSWORD=tailor postgres:17
+npm run dev                  # http://localhost:3000, migrations run on start
 ```
 
 ## Google OAuth client
@@ -32,12 +33,12 @@ The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on e
    `echo <token> | docker login ghcr.io -u <github-user> --password-stdin`
 2. In Coolify: New resource > **Docker Image** > `ghcr.io/<github-user>/tailor:latest`.
 3. Port **3000**. The image has a `HEALTHCHECK` against `/api/health`, which Coolify picks up.
-4. Persistent storage: a volume mounted at **`/data`** (SQLite database; migrations run on start).
-5. Environment variables: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your https domain), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAILS`. No Gemini key on the server.
+4. Database: add a **PostgreSQL** resource in the same Coolify project and copy its internal connection URL. Migrations run when the app starts.
+5. Environment variables: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your https domain), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAILS`. No Gemini key on the server.
 6. Add `https://<your-domain>/api/auth/callback/google` to the Google OAuth client, then deploy.
 7. Optional auto-deploy: in the GitHub repo add secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token). The workflow then triggers a redeploy after each push.
 
-Back up `/data/career.db` (Coolify can schedule volume backups). Typst 0.15.1 and the resume template package are baked into the image, so PDF builds don't download anything at runtime. Building the image needs about 1.5 GB of RAM, which is why it happens in GitHub Actions rather than on the server.
+Back up the Postgres database (Coolify can schedule backups for its database resources). Typst 0.15.1 and the resume template package are baked into the image, so PDF builds don't download anything at runtime. Building the image needs about 1.5 GB of RAM, which is why it happens in GitHub Actions rather than on the server.
 
 ## Models and cost
 
@@ -48,7 +49,7 @@ Two Gemini models: `GEMINI_MODEL_FAST` (job extraction, fit analysis, questions)
 ```
 src/domain/          entities, schemas, fit scoring, allowlist, errors, ports (no framework code)
 src/application/     ApplicationService: start, generate, revise (per user)
-src/infrastructure/  SQLite (Drizzle), Better Auth, Gemini adapter, Typst renderer, YAML parsing
+src/infrastructure/  Postgres (Drizzle), Better Auth, Gemini adapter, Typst renderer, YAML parsing
 src/prompts/         prompts adapted from .claude/skills/tailored/SKILL.md
 src/components/ui/   Button, Card, EmptyState, Field, TextArea, PageHeader, ...
 src/app/             pages, server actions, auth/health/PDF routes
@@ -58,7 +59,7 @@ The model never writes Typst. It returns structured JSON that points at your rol
 
 ## Database
 
-SQLite (`DATABASE_URL`). Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generate`. Profiles and resumes are JSON columns (they map to `jsonb` on Postgres).
+Postgres via Drizzle (`DATABASE_URL`). Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generate`; migrations in `drizzle/` run on server start (`src/instrumentation.ts`). Profiles and resumes are `jsonb`, PDFs `bytea`. Tests use PGlite (Postgres in-process), so `npm test` needs no database server.
 
 ## Tests
 

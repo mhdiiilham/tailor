@@ -5,9 +5,9 @@ import { getDb } from "@/infrastructure/db/instance";
 export const dynamic = "force-dynamic";
 
 // Used by the Docker HEALTHCHECK (and Coolify). Healthy means the database answers.
-export function GET() {
+export async function GET() {
   try {
-    getDb().get(sql`select 1`);
+    await getDb().execute(sql`select 1`);
     return Response.json({ status: "ok" });
   } catch {
     return Response.json({ status: "error" }, { status: 503 });
