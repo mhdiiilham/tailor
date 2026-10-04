@@ -1,47 +1,64 @@
 # Tailor
 
-A local web app version of the `/tailored` workflow. Paste a job description, see how well you fit, answer a few questions, get a tailored resume PDF.
+Paste a job description, answer a few questions, download a tailored one-page resume PDF. A web version of the `/tailored` workflow, for a small invite-only group.
 
-## Setup
+- **Sign in with Google**, limited to the emails in `ALLOWED_EMAILS`.
+- **Bring your own key:** each person adds their own Gemini API key in Settings. It's kept in that browser's `localStorage`, sent with each AI request, and never stored on the server. Guide: https://ai.google.dev/gemini-api/docs/api-key
+- Each person has their own profile and applications.
 
-Requires Node 22+ and [Typst](https://typst.app) on your PATH (`brew install typst`).
+## Run locally
+
+Requires Node 22+ and [Typst](https://typst.app) (`brew install typst`).
 
 ```bash
 npm install
-cp .env.example .env.local   # pick a provider and add a key
-npm run seed:profile          # imports ../profile/profile.yaml into SQLite (or use the Profile page)
-npm run dev                   # http://localhost:3000
+cp .env.example .env.local   # fill in auth settings (see Google OAuth below)
+npm run dev                  # http://localhost:3000
 ```
 
-PDFs are written to `../tailored/<company>_<role>/`, the same folders the `/tailored` skill uses.
+## Google OAuth client
 
-## Choosing a model
+1. Google Cloud Console > APIs & Services > Credentials > Create credentials > OAuth client ID > Web application.
+2. Authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://<your-domain>/api/auth/callback/google`
+3. Put the client ID and secret in `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 
-Set `LLM_PROVIDER` in `.env.local`. Two model slots: `LLM_MODEL_FAST` (job extraction, fit analysis, questions) and `LLM_MODEL_WRITE` (the resume).
+## Deploy on Coolify
 
-| Provider | `LLM_PROVIDER` | Notes |
-|---|---|---|
-| Claude | `anthropic` | Defaults to Haiku 4.5 (fast) and Sonnet 5.5 (write), roughly $0.05 to $0.10 per resume |
-| Gemini | `google` | Has a free tier |
-| Qwen, DeepSeek, OpenRouter, Ollama | `openai-compatible` | Set `LLM_BASE_URL`, `LLM_API_KEY` and both model names |
+The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on every push to `main` that touches `app/`. It runs typecheck, lint and tests, then pushes `ghcr.io/<github-user>/tailor:latest` (plus a `sha-xxxxxxx` tag). Coolify only pulls and runs it.
 
-Every model call logs its token usage to the server console.
+1. Push to `main` once so the image exists. If the GitHub package is private, log the Coolify server in to GHCR with a token that has `read:packages`:
+   `echo <token> | docker login ghcr.io -u <github-user> --password-stdin`
+2. In Coolify: New resource > **Docker Image** > `ghcr.io/<github-user>/tailor:latest`.
+3. Port **3000**. The image has a `HEALTHCHECK` against `/api/health`, which Coolify picks up.
+4. Persistent storage: a volume mounted at **`/data`** (SQLite database; migrations run on start).
+5. Environment variables: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your https domain), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAILS`. No Gemini key on the server.
+6. Add `https://<your-domain>/api/auth/callback/google` to the Google OAuth client, then deploy.
+7. Optional auto-deploy: in the GitHub repo add secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token). The workflow then triggers a redeploy after each push.
+
+Back up `/data/career.db` (Coolify can schedule volume backups). Typst 0.15.1 and the resume template package are baked into the image, so PDF builds don't download anything at runtime. Building the image needs about 1.5 GB of RAM, which is why it happens in GitHub Actions rather than on the server.
+
+## Models and cost
+
+Two Gemini models: `GEMINI_MODEL_FAST` (job extraction, fit analysis, questions) and `GEMINI_MODEL_WRITE` (the resume). The free tier costs nothing; on a paid key a resume is a few cents. Each model call logs its token usage to the server console.
 
 ## Layout
 
 ```
-src/domain/          entities, schemas, fit scoring, ports (no framework code)
-src/application/     ApplicationService: start, generate, revise
-src/infrastructure/  SQLite (Drizzle), AI SDK adapter, Typst renderer, YAML import
+src/domain/          entities, schemas, fit scoring, allowlist, errors, ports (no framework code)
+src/application/     ApplicationService: start, generate, revise (per user)
+src/infrastructure/  SQLite (Drizzle), Better Auth, Gemini adapter, Typst renderer, YAML parsing
 src/prompts/         prompts adapted from .claude/skills/tailored/SKILL.md
-src/app/             Next.js pages and server actions
+src/components/ui/   Button, Card, EmptyState, Field, TextArea, PageHeader, ...
+src/app/             pages, server actions, auth/health/PDF routes
 ```
 
-The model never writes Typst. It returns structured JSON that points at roles and projects by index, and `typstResume.ts` renders it, so titles, companies and dates always come from your profile.
+The model never writes Typst. It returns structured JSON that points at your roles and projects by index, and `typstResume.ts` renders it, so titles, companies and dates always come from your profile.
 
 ## Database
 
-SQLite at `./data/career.db`. Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generate`. Migrations run on startup. Profiles and resumes are stored as JSON columns, which map to `jsonb` when moving to Postgres.
+SQLite (`DATABASE_URL`). Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generate`. Profiles and resumes are JSON columns (they map to `jsonb` on Postgres).
 
 ## Tests
 

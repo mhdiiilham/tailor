@@ -9,7 +9,8 @@ const g = globalThis as unknown as { __db?: Db };
 export function getDb(): Db {
   if (!g.__db) {
     const file = process.env.DATABASE_URL ?? "./data/career.db";
-    mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
+    // The DB path is runtime config, not a project file, so keep it out of build tracing.
+    mkdirSync(path.dirname(path.resolve(/*turbopackIgnore: true*/ file)), { recursive: true });
     g.__db = openDb(file);
   }
   return g.__db;
