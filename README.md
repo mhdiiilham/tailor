@@ -1,5 +1,9 @@
 # Tailor
 
+<p align="center">
+  <img src="./public/brand/tailor-horizontal.svg" alt="Tailor" width="320">
+</p>
+
 Paste a job description, answer a few questions, and download a one-page resume tailored to that job. Tailor also tracks where each application stands, from "Not applied" to "Offer".
 
 - **Bring your own key.** Each person adds their own Gemini API key in Settings. It stays in their browser and is sent with each AI request; the server never stores it.
