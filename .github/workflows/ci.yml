@@ -1,15 +1,16 @@
-# Checks every pull request and every branch push. The image workflow reuses it
-# for main, so main is checked before an image is built.
+# Checks every pull request and every push, including main. The image workflow
+# also runs it first, so an image is only built from code that passes.
 name: CI
 
 on:
   pull_request:
   push:
-    branches-ignore: [main]
   workflow_call:
 
+# Newer pushes to the same branch cancel older runs. github.workflow is the
+# caller's name when reused, so an image build never cancels a normal CI run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

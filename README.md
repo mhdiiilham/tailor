@@ -102,10 +102,10 @@ Fly.io, Railway, Render, Kubernetes and similar all work: run the image, set the
 
 ### Prebuilt images with GitHub Actions
 
-`.github/workflows/tailor-image.yml` runs on every push to `main`. It typechecks, lints, runs the tests, then builds and pushes `ghcr.io/<github-user>/tailor:latest` and a `sha-xxxxxxx` tag. Building there means a small server never has to build.
+`.github/workflows/tailor-image.yml` runs when you start it: **Actions > Tailor image > Run workflow** (pick the branch, usually `main`). It runs the CI checks, then builds and pushes `ghcr.io/<github-user>/tailor:latest` and a `sha-xxxxxxx` tag. Building there means a small server never has to build.
 
 - If the package is private, log your server in once: `echo <token> | docker login ghcr.io -u <github-user> --password-stdin`, using a token with `read:packages`.
-- Optional auto-deploy to Coolify: add repository secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token).
+- Optional deploy to Coolify after each image build: add repository secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token).
 - The image is built for `linux/amd64`. For an ARM server, add `linux/arm64` to `platforms` in the workflow.
 
 ## 4. Make it yours (legal pages)
@@ -149,7 +149,7 @@ Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generat
 
 ### Continuous integration
 
-`.github/workflows/ci.yml` runs on every pull request and every branch push: typecheck, lint, tests (with Typst installed, so PDF rendering is tested for real), a check that migrations match the schema, and a production build. On `main` the image workflow runs the same checks before building and pushing the image.
+`.github/workflows/ci.yml` runs on every pull request and every push, including `main`: typecheck (it generates Next.js route types first), lint, tests (with Typst installed, so PDF rendering is tested for real), a check that migrations match the schema, and a production build. The image workflow runs the same checks before it builds.
 
 ## How it works
 

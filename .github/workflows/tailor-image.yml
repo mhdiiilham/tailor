@@ -1,10 +1,9 @@
 # Builds the Tailor app image and pushes it to GitHub Container Registry,
 # then (optionally) tells Coolify to pull and redeploy it.
+# Runs only when started by hand: Actions > Tailor image > Run workflow.
 name: Tailor image
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
