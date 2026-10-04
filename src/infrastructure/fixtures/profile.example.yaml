@@ -1,0 +1,49 @@
+# Fictional profile used by tests. Same shape as a real profile.yaml.
+personal:
+  name: "Ratna Wibowo"
+  email: "ratna@example.com"
+  phone: "+62-812-0000-0000"
+  location: "Bandung, Indonesia"
+  linkedin: "linkedin.com/in/ratna-example"
+  github: "github.com/ratna-example"
+  portfolio: ""
+
+summary: |
+  Backend engineer working in Go and Postgres for payments teams.
+
+experience:
+  - title: "Backend Engineer"
+    company: "Kopi Ledger"
+    location: "Remote"
+    start: "2022-03"
+    end: "present"
+    highlights:
+      - "Cut settlement reconciliation from 3 hours to 12 minutes by batching ledger queries."
+  - title: "Software Engineer"
+    company: "Pasar Cepat"
+    location: "Jakarta, Indonesia"
+    start: "2019-07"
+    end: "2022-02"
+    highlights:
+      - "Built the order webhook pipeline that handled 40k events a day."
+
+education:
+  - degree: "BSc Computer Science"
+    institution: "Institut Teknologi Contoh"
+    year: 2019
+
+skills:
+  languages: ["Go", "TypeScript"]
+  databases: ["PostgreSQL", "Redis"]
+
+projects:
+  - name: "pgbatch"
+    description: "Small Go library for batching Postgres writes."
+    url: "github.com/ratna-example/pgbatch"
+    tech: ["Go", "PostgreSQL"]
+
+writing_style:
+  voice_sample: |
+    I like boring systems that keep working at 3am.
+  avoid_mentioning: []
+  always_include_if_relevant: []
