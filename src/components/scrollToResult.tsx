@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 
-// After generating or revising, the page re-renders with the new resume. The form
-// sets this one-time flag before submitting; when the resume appears (this component
-// is keyed by the resume's version, so it remounts on every change) it scrolls to it.
-const FLAG = "tailor.scrollToResume";
+// After generating or revising, the page re-renders with the new result. The form
+// sets this one-time flag before submitting; when the result appears (this component
+// is keyed by the result version, so it remounts on every change) it scrolls to it.
+const FLAG = "tailor.scrollToResult";
 
-export function requestScrollToResume(applicationId: number) {
+export function requestScrollToResult(applicationId: number) {
   try {
     sessionStorage.setItem(FLAG, String(applicationId));
   } catch {
@@ -15,13 +15,13 @@ export function requestScrollToResume(applicationId: number) {
   }
 }
 
-export function cancelScrollToResume() {
+export function cancelScrollToResult() {
   try {
     sessionStorage.removeItem(FLAG);
   } catch {}
 }
 
-export function ScrollToResume({ applicationId, targetId }: { applicationId: number; targetId: string }) {
+export function ScrollToResult({ applicationId, targetId }: { applicationId: number; targetId: string }) {
   useEffect(() => {
     let wanted = false;
     try {

@@ -20,6 +20,8 @@ export type Application = {
   typSource: string | null;
   pdf: Buffer | null;
   pdfCreatedAt: Date | null;
+  // Plain text, ready to paste. Null until the user asks for one.
+  coverLetter: string | null;
   status: ApplicationStatus;
   // Job-hunt progress, set by the user.
   stage: Stage;

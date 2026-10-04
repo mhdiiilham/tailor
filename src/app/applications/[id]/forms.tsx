@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { generateResume, reviseResume, type ActionState } from "@/app/actions";
 import type { Answers, Question } from "@/domain/questions";
 import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
-import { cancelScrollToResume, requestScrollToResume } from "@/components/scrollToResume";
+import { cancelScrollToResult, requestScrollToResult } from "@/components/scrollToResult";
 import { Field, FormMessage, PendingSteps, SubmitButton, TextArea, type PendingStep } from "@/components/ui";
 
 const GENERATE_STEPS: PendingStep[] = [
@@ -16,7 +16,7 @@ const GENERATE_STEPS: PendingStep[] = [
 // Scroll to the new resume once it appears, unless the request failed.
 function useScrollAfterSuccess(error: string | undefined) {
   useEffect(() => {
-    if (error) cancelScrollToResume();
+    if (error) cancelScrollToResult();
   }, [error]);
 }
 
@@ -25,7 +25,7 @@ export function QuestionsForm({ id, questions, answers }: { id: number; question
   useScrollAfterSuccess(state.error);
   return (
     <RequireGeminiKey>
-      <form action={action} onSubmit={() => requestScrollToResume(id)} className="grid gap-6">
+      <form action={action} onSubmit={() => requestScrollToResult(id)} className="grid gap-6">
         <GeminiKeyInput />
         {questions.map((q) => (
           <Field key={q.id} label={q.question} htmlFor={`q-${q.id}`}>
@@ -68,7 +68,7 @@ export function ReviseForm({ id }: { id: number }) {
 
   return (
     <RequireGeminiKey>
-      <form action={action} onSubmit={() => requestScrollToResume(id)} className="grid gap-3">
+      <form action={action} onSubmit={() => requestScrollToResult(id)} className="grid gap-3">
         <GeminiKeyInput />
         <Field label="Ask for a revision" htmlFor="feedback">
           <TextArea

@@ -199,3 +199,51 @@ describe("cleanResume", () => {
     expect(() => cleanResume(profile, { ...resume, work: [{ experienceIndex: 9, bullets: ["x"] }] })).toThrow();
   });
 });
+
+describe("ApplicationService.writeCoverLetter", () => {
+  const letter = (...paragraphs: string[]) => ({ paragraphs });
+
+  async function generated(responses: unknown[]) {
+    const ctx = setup([job, judgement, { questions: [] }, resume, ...responses]);
+    const app = await ctx.service.start("jd");
+    await ctx.service.generate(app.id, {});
+    return { ...ctx, id: app.id };
+  }
+
+  it("drafts, runs the humanizer pass, and saves plain text with a sign-off", async () => {
+    const { service, llm, id } = await generated([
+      letter("Draft one.", "Draft two.", "Draft three."),
+      letter("Your ledger work caught my eye \u2014 it\u2019s close to mine.", "I cut reconciliation to 12 minutes.", "Happy to talk through it."),
+    ]);
+
+    const done = await service.writeCoverLetter(id);
+
+    expect(llm.requests.slice(4).map((r) => r.system.slice(0, 20))).toEqual([
+      "You write a cover le",
+      "You edit a cover let",
+    ]);
+    expect(llm.requests[5].prompt).toContain("Draft one.");
+    expect(done.coverLetter).toBe(
+      "Your ledger work caught my eye, it's close to mine.\n\nI cut reconciliation to 12 minutes.\n\nHappy to talk through it.\n\nBest regards,\nAda",
+    );
+  });
+
+  it("asks for one more rewrite when AI phrasing survives the humanizer", async () => {
+    const { service, llm, id } = await generated([
+      letter("a", "b", "c"),
+      letter("I am writing to express interest.", "A pivotal role.", "Thanks."),
+      letter("Your ledger work caught my eye.", "I cut it to 12 minutes.", "Let's talk."),
+    ]);
+
+    const done = await service.writeCoverLetter(id);
+
+    expect(llm.requests[6].prompt).toMatch(/still contains: pivotal, i am writing to express/);
+    expect(done.coverLetter).toContain("Your ledger work caught my eye.");
+  });
+
+  it("needs a resume first", async () => {
+    const { service } = setup([job, judgement, { questions: [] }]);
+    const app = await service.start("jd");
+    await expect(service.writeCoverLetter(app.id)).rejects.toThrow(/resume/);
+  });
+});

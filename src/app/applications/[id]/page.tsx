@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaretRight, DownloadSimple, Lightning, Sparkle } from "@phosphor-icons/react/dist/ssr";
@@ -7,7 +8,8 @@ import { resumeFileName } from "@/domain/slug";
 import { Badge, ButtonAnchor, Card, SectionHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { StageSelect } from "@/components/stageSelect";
-import { ScrollToResume } from "@/components/scrollToResume";
+import { ScrollToResult } from "@/components/scrollToResult";
+import { CoverLetterPanel } from "./coverLetter";
 import { DeleteApplication } from "./deleteApplication";
 import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
@@ -35,9 +37,10 @@ function matchLabel(score: number) {
   return { text: "Low match", tone: "danger" as const };
 }
 
-const sectionLinks = [
+const sectionLinks = (withCoverLetter: boolean) => [
   { href: "#match", label: "Match" },
   { href: "#resume", label: "Resume" },
+  ...(withCoverLetter ? [{ href: "#cover-letter", label: "Cover letter" }] : []),
   { href: "#job", label: "Job description" },
 ];
 
@@ -105,7 +108,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
       </header>
 
       <nav className="flex gap-1 overflow-x-auto border-b border-line text-sm" aria-label="Sections">
-        {sectionLinks.map((s) => (
+        {sectionLinks(generated).map((s) => (
           <a
             key={s.href}
             href={s.href}
@@ -174,7 +177,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
                 {preview ? (
                   <>
                     <ResumeViewer id={app.id} pages={preview.pages.length} version={preview.version} />
-                    <ScrollToResume key={preview.version} applicationId={app.id} targetId="resume-viewer" />
+                    <ScrollToResult key={preview.version} applicationId={app.id} targetId="resume-viewer" />
                   </>
                 ) : null}
                 <p className="font-mono text-xs text-faint">{fileName}</p>
@@ -220,6 +223,17 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           )}
         </div>
       </div>
+
+      {generated ? (
+        <section id="cover-letter" className="scroll-mt-24">
+          <CoverLetterPanel id={app.id} text={app.coverLetter} />
+          <ScrollToResult
+            key={app.coverLetter ? createHash("sha1").update(app.coverLetter).digest("hex") : "none"}
+            applicationId={app.id}
+            targetId="cover-letter"
+          />
+        </section>
+      ) : null}
 
       <section id="job" className="scroll-mt-24">
         <Card>

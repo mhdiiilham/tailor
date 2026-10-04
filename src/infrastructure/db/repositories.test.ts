@@ -33,6 +33,7 @@ const newApp = (userId: string): NewApplication => ({
   typSource: null,
   pdf: null,
   pdfCreatedAt: null,
+  coverLetter: null,
   status: "questions",
   stage: "not_applied",
   stageUpdatedAt: null,

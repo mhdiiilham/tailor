@@ -157,9 +157,10 @@ Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generat
 2. **Fit analysis.** Gemini extracts the requirements and matches each against your profile. The score is computed in code from those matches (40% requirements, 25% stack, 20% seniority, 10% nice-to-haves, 5% domain).
 3. **Questions.** Two fixed questions, plus two to four about your gaps.
 4. **Resume.** Gemini returns structured JSON that points at your roles and projects by index. `src/infrastructure/typst/typstResume.ts` turns it into Typst and compiles a PDF, so titles, companies and dates always come from your profile. Banned buzzwords trigger one rewrite, and em dashes are removed.
-5. **Track it.** Set the stage (Not applied, Applied, Interviewing, Offer, Rejected, Withdrawn); the applied date is recorded automatically.
+5. **Cover letter (optional).** Gemini drafts three or four paragraphs from the resume, your answers and your voice sample, a second pass rewrites it to remove AI-sounding patterns, and a final check catches leftover clichés. It's stored and shown as plain text to copy.
+6. **Track it.** Set the stage (Not applied, Applied, Interviewing, Offer, Rejected, Withdrawn); the applied date is recorded automatically.
 
-**What's stored:** per user, the profile, and per application the job description, answers, analysis, resume content, Typst source and stage. PDFs are deleted 24 hours after they're made and rebuilt from the Typst source if downloaded later. People can delete an application or their whole account at any time.
+**What's stored:** per user, the profile, and per application the job description, answers, analysis, resume content, Typst source, cover letter (if generated) and stage. PDFs are deleted 24 hours after they're made and rebuilt from the Typst source if downloaded later. People can delete an application or their whole account at any time.
 
 ```
 src/domain/          entities, schemas, fit scoring, stages, retention, allowlist (no framework code)

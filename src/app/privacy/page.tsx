@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>What Tailor creates for you:</strong> the fit analysis, the tailored resume content, its Typst
-            source, the PDF, and the stage and dates you set for each application.
+            source, the PDF, any cover letter you generate, and the stage and dates you set for each application.
           </li>
         </ul>
       </LegalSection>

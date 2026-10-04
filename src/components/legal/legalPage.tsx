@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export const LEGAL_UPDATED = "4 October 2026";
+export const LEGAL_UPDATED = "5 October 2026";
 export const CONTACT_EMAIL = "hi@muhammadilham.xyz";
 
 // Readable long-form layout for the Privacy Policy and Terms.

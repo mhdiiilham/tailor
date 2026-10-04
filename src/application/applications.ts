@@ -2,20 +2,16 @@ import { z } from "zod";
 import type { Application } from "@/domain/application";
 import { FitJudgementSchema, fitScore } from "@/domain/fit";
 import { JobPostingSchema } from "@/domain/job";
-import type {
-  ApplicationRepository,
-  LlmPort,
-  ProfileRepository,
-  ResumeRenderer,
-  StoredProfile,
-} from "@/domain/ports";
+import type { ApplicationRepository, LlmPort, ProfileRepository, ResumeRenderer, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
 import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers } from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
-import { findBannedWords, stripEmDashes } from "@/domain/writing";
+import { findBannedWords, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
+import { coverLetterText, CoverLetterSchema, type CoverLetterDraft } from "@/domain/coverLetter";
 import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM, QUESTIONS_SYSTEM } from "@/prompts/analysis";
 import { profileContext } from "@/prompts/profileContext";
 import { BANNED_WORDS_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
+import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, TELLS_FIX } from "@/prompts/coverLetter";
 
 export class NoProfileError extends Error {
   constructor() {
@@ -84,6 +80,7 @@ export class ApplicationService {
       typSource: null,
       pdf: null,
       pdfCreatedAt: null,
+      coverLetter: null,
       status: "questions",
       stage: "not_applied",
       stageUpdatedAt: null,
@@ -113,6 +110,48 @@ export class ApplicationService {
     return this.renderAndSave(app, profile, resume, {});
   }
 
+  // A plain-text cover letter: drafted, run through a humanizer pass, then checked
+  // for leftover AI phrasing (one more rewrite if any is found).
+  async writeCoverLetter(id: number): Promise<Application> {
+    const app = await this.requireApplication(id);
+    if (!app.resume) throw new Error("Generate the resume before writing a cover letter.");
+    const { profile } = await this.requireProfile();
+    const { llm } = this.deps;
+    const qa = app.questions
+      .map((q) => `Q: ${q.question}\nA: ${app.answers?.[q.id]?.trim() || "(no answer)"}`)
+      .join("\n\n");
+    const context = `${this.tailorContext(profile, app)}\n\nTAILORED RESUME:\n${JSON.stringify(app.resume, null, 2)}\n\nCANDIDATE'S ANSWERS:\n${qa}`;
+    const asText = (d: CoverLetterDraft) => d.paragraphs.join("\n\n");
+    const voice = `VOICE SAMPLE:\n${profile.writing_style.voice_sample || "(none)"}`;
+
+    const draft = await llm.generateObject({
+      tier: "write",
+      schema: CoverLetterSchema,
+      system: COVER_LETTER_SYSTEM,
+      prompt: context,
+    });
+    let letter = await llm.generateObject({
+      tier: "write",
+      schema: CoverLetterSchema,
+      system: HUMANIZE_SYSTEM,
+      prompt: `${voice}\n\nLETTER:\n${asText(draft)}`,
+    });
+
+    const tells = findWritingTells(asText(letter));
+    if (tells.length > 0) {
+      letter = await llm.generateObject({
+        tier: "write",
+        schema: CoverLetterSchema,
+        system: HUMANIZE_SYSTEM,
+        prompt: `${voice}\n\nLETTER:\n${asText(letter)}\n\n${TELLS_FIX(tells)}`,
+      });
+    }
+
+    const clean = { paragraphs: letter.paragraphs.map(toPlainText) };
+    const coverLetter = coverLetterText(clean, profile.personal.name);
+    return this.deps.applications.update(this.deps.userId, app.id, { coverLetter });
+  }
+
   private tailorContext(profile: Profile, app: Application): string {
     const style = profile.writing_style;
     return [
@@ -128,7 +167,12 @@ export class ApplicationService {
 
   private async tailor(profile: Profile, prompt: string): Promise<TailoredResume> {
     const { llm } = this.deps;
-    let resume = await llm.generateObject({ tier: "write", schema: TailoredResumeSchema, system: TAILOR_RESUME_SYSTEM, prompt });
+    let resume = await llm.generateObject({
+      tier: "write",
+      schema: TailoredResumeSchema,
+      system: TAILOR_RESUME_SYSTEM,
+      prompt,
+    });
 
     const banned = findBannedWords(resumeText(resume));
     if (banned.length > 0) {
@@ -182,13 +226,19 @@ function resumeText(r: TailoredResume): string {
 export function cleanResume(profile: Profile, r: TailoredResume): TailoredResume {
   const seenWork = new Set<number>();
   const work = r.work
-    .filter((w) => w.experienceIndex < profile.experience.length && !seenWork.has(w.experienceIndex) && seenWork.add(w.experienceIndex))
+    .filter(
+      (w) =>
+        w.experienceIndex < profile.experience.length &&
+        !seenWork.has(w.experienceIndex) &&
+        seenWork.add(w.experienceIndex),
+    )
     .sort((a, b) => a.experienceIndex - b.experienceIndex);
   if (work.length === 0) throw new Error("The model returned no valid work experience. Try again.");
 
   const seenProjects = new Set<number>();
   const projects = r.projects.filter(
-    (p) => p.projectIndex < profile.projects.length && !seenProjects.has(p.projectIndex) && seenProjects.add(p.projectIndex),
+    (p) =>
+      p.projectIndex < profile.projects.length && !seenProjects.has(p.projectIndex) && seenProjects.add(p.projectIndex),
   );
 
   const clean = (s: string) => stripEmDashes(s).trim();

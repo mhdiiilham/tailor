@@ -146,3 +146,15 @@ export async function setApplicationStage(id: number, stage: string): Promise<Ac
   refresh();
   return {};
 }
+
+export async function writeCoverLetter(id: number, _prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const key = field(form, "geminiKey");
+  try {
+    await applicationServiceFor(user.id, key).writeCoverLetter(id);
+  } catch (err) {
+    return { error: describe(err, key) };
+  }
+  refresh();
+  return {};
+}

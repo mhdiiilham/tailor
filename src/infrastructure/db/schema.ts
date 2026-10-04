@@ -94,6 +94,7 @@ export const applications = pgTable("applications", {
   pdf: bytea("pdf"),
   // When the stored PDF was made; it's deleted after PDF_RETENTION_MS.
   pdfCreatedAt: ts("pdf_created_at"),
+  coverLetter: text("cover_letter"),
   status: text("status", { enum: ["questions", "generated"] }).notNull(),
   stage: text("stage", { enum: STAGES }).notNull().default("not_applied"),
   stageUpdatedAt: ts("stage_updated_at"),
