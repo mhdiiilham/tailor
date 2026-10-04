@@ -44,6 +44,7 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
+// Static assets skip the proxy, so signed-out visitors still get the logo and icons.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|brand/|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest).*)"],
 };

@@ -1,0 +1,38 @@
+{
+  "brand": "Tailor",
+  "tagline": "A CV tailored to every opportunity",
+  "brief": "A CV tailoring app helping job seekers shape their experience for each role. The identity should feel considered, personal and polished, with an editorial touch.",
+  "adjectives": ["considered", "personal", "polished", "editorial"],
+  "criteria": "The Stitched T should work as a one-colour symbol, stay recognizable in app and browser icons, and pair with a refined Tailor wordmark.",
+  "industry": "consumer-app",
+  "brand_color": "#762D46",
+  "tile_color": "#762D46",
+  "greyscale": false,
+  "final": true,
+  "round": 1,
+  "concepts": [
+    {
+      "name": "Stitched T",
+      "symbol": "tailor-symbol.svg",
+      "lockup": "tailor-horizontal.svg",
+      "stacked": "tailor-stacked.svg",
+      "avatar": "tailor-symbol-app-icon.svg",
+      "symbol_on_tile": "tailor-symbol-white.svg",
+      "stacked_on_tile": "tailor-stacked-white.svg",
+      "symbol_on_dark": "tailor-symbol-white.svg",
+      "lockup_on_dark": "tailor-horizontal-white.svg",
+      "idea": "A T finished with precise stitch holes, expressing care in tailoring a CV to a role.",
+      "rationale": [
+        "Simple letterform reads quickly as an app symbol",
+        "Stitches connect the Tailor name to careful, personal editing",
+        "Berry and editorial serif bring warmth to a job-search tool"
+      ]
+    }
+  ],
+  "recommendation": "Use the horizontal lockup in the app header and the simplified T in browser tabs and app icons.",
+  "next_steps": [
+    "Apply the favicon and manifest links from head-snippet.html when integrating the icon set",
+    "Check the chosen color against the app interface before wider rollout",
+    "Complete a trademark search before commercial launch"
+  ]
+}

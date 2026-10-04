@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
-import { Scissors } from "@phosphor-icons/react/dist/ssr";
 import { NavLinks } from "@/components/navLinks";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
@@ -13,6 +13,14 @@ const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subset
 export const metadata: Metadata = {
   title: "Tailor",
   description: "Paste a job description, get a tailored resume.",
+};
+
+// Matches the page background, so the mobile browser bar blends into the header.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0f17" },
+  ],
 };
 
 // The wordmark already links home, so "Applications" is dropped on small screens to keep one line.
@@ -30,11 +38,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-[100dvh] flex-col font-sans">
         <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
-            <Link href="/" className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
-              <span className="grid size-8 place-items-center rounded-ui bg-accent text-on-accent">
-                <Scissors size={17} weight="bold" />
-              </span>
-              Tailor
+            {/* The berry lockup is for light surfaces; the white one is for dark mode. */}
+            <Link href="/" aria-label="Tailor home" className="shrink-0">
+              <Image
+                src="/brand/tailor-horizontal.svg"
+                alt="Tailor"
+                width={140}
+                height={42}
+                priority
+                className="dark:hidden"
+              />
+              <Image
+                src="/brand/tailor-horizontal-white.svg"
+                alt="Tailor"
+                width={140}
+                height={42}
+                priority
+                className="hidden dark:block"
+              />
             </Link>
             {user ? (
               <div className="flex min-w-0 items-center gap-1 md:gap-3">
