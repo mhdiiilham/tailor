@@ -20,11 +20,34 @@ export function PageHeader({
   );
 }
 
-export function SectionHeader({ title, description }: { title: string; description?: ReactNode }) {
-  return (
+// `icon` sits in a tinted tile beside the title; `aside` is a badge or action on the right.
+export function SectionHeader({
+  title,
+  description,
+  icon,
+  aside,
+}: {
+  title: string;
+  description?: ReactNode;
+  icon?: ReactNode;
+  aside?: ReactNode;
+}) {
+  const text = (
     <div className="grid gap-1">
       <h2 className="text-lg font-medium">{title}</h2>
       {description ? <p className="text-sm text-muted">{description}</p> : null}
+    </div>
+  );
+  if (!icon && !aside) return text;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        {icon ? (
+          <span className="grid size-9 shrink-0 place-items-center rounded-ui bg-accent-soft text-accent">{icon}</span>
+        ) : null}
+        {text}
+      </div>
+      {aside}
     </div>
   );
 }

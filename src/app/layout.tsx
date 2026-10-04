@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { Scissors } from "@phosphor-icons/react/dist/ssr";
+import { NavLinks } from "@/components/navLinks";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import "./globals.css";
@@ -37,17 +38,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             {user ? (
               <div className="flex min-w-0 items-center gap-1 md:gap-3">
-                <nav className="flex items-center overflow-x-auto text-sm">
-                  {nav.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`${item.wide ? "hidden sm:block" : ""} whitespace-nowrap rounded-ui px-2 py-1.5 text-muted transition-colors hover:bg-raised hover:text-ink md:px-3`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
+                <NavLinks items={nav} />
                 <UserMenu name={user.name} image={user.image} />
               </div>
             ) : (
