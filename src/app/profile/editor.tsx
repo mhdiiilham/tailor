@@ -2,7 +2,8 @@
 
 import { useActionState, useRef } from "react";
 import { saveProfile, type ActionState } from "@/app/actions";
-import { Field, FormMessage, SubmitButton, TextArea, buttonClass } from "@/components/ui";
+import { Button, Field, FormMessage, SubmitButton, TextArea, buttonClass } from "@/components/ui";
+import { PROFILE_TEMPLATE } from "./profileGuide";
 
 export function ProfileEditor({ initialYaml }: { initialYaml: string }) {
   const [state, action] = useActionState<ActionState, FormData>(saveProfile, {});
@@ -15,16 +16,33 @@ export function ProfileEditor({ initialYaml }: { initialYaml: string }) {
     e.target.value = "";
   }
 
+  function useTemplate() {
+    const box = textarea.current;
+    if (!box) return;
+    if (
+      box.value.trim() &&
+      !confirm("Replace what's in the editor with the template? Nothing is saved until you press Save.")
+    )
+      return;
+    box.value = PROFILE_TEMPLATE;
+    box.focus();
+  }
+
   return (
-    <form action={action} className="grid gap-5">
+    <form action={action} className="grid min-w-0 gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label htmlFor="yaml" className="text-sm font-medium">
           Profile YAML
         </label>
-        <label className={buttonClass("secondary", "cursor-pointer")}>
-          Upload profile.yaml
-          <input type="file" accept=".yaml,.yml,text/yaml" onChange={upload} className="sr-only" />
-        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={useTemplate}>
+            Start from template
+          </Button>
+          <label className={buttonClass("secondary", "cursor-pointer")}>
+            Upload profile.yaml
+            <input type="file" accept=".yaml,.yml,text/yaml" onChange={upload} className="sr-only" />
+          </label>
+        </div>
       </div>
       <Field
         htmlFor="yaml"
