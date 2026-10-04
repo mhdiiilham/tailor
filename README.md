@@ -40,6 +40,10 @@ The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on e
 
 Back up the Postgres database (Coolify can schedule backups for its database resources). Typst 0.15.1 and the resume template package are baked into the image, so PDF builds don't download anything at runtime. Building the image needs about 1.5 GB of RAM, which is why it happens in GitHub Actions rather than on the server.
 
+## Tracking applications
+
+Each application has a stage you set from the dashboard or its page: Not applied, Applied, Interviewing, Offer, Rejected or Withdrawn. The date you applied is recorded the first time it leaves "Not applied". The dashboard filters by stage and counts applications, interviews and offers.
+
 ## Your data
 
 - Stored per user in Postgres: profile, and per application the job description, answers, resume content and Typst source.

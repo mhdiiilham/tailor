@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useGeminiKey } from "@/components/geminiKey";
 
 // Facts only: whether this browser has a key, and numbers from your own applications.
-export function StatusStrip({ total, averageFit }: { total: number; averageFit: number | null }) {
+type Props = { total: number; averageFit: number | null; applied: number; interviewing: number; offers: number };
+
+export function StatusStrip({ total, averageFit, applied, interviewing, offers }: Props) {
   const key = useGeminiKey();
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-card border border-line bg-raised px-5 py-3 font-mono text-xs text-muted">
@@ -19,6 +21,15 @@ export function StatusStrip({ total, averageFit }: { total: number; averageFit: 
       </Link>
       <span>
         Applications: <span className="text-ink">{total}</span>
+      </span>
+      <span>
+        Applied: <span className="text-ink">{applied}</span>
+      </span>
+      <span>
+        Interviewing: <span className="text-ink">{interviewing}</span>
+      </span>
+      <span>
+        Offers: <span className={offers ? "text-good" : "text-ink"}>{offers}</span>
       </span>
       {averageFit !== null ? (
         <span>

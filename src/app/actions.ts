@@ -16,6 +16,7 @@ import {
 import { getAuth } from "@/infrastructure/auth/auth";
 import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
+import { StageSchema } from "@/domain/stage";
 
 export type ActionState = { error?: string; notice?: string };
 
@@ -129,4 +130,19 @@ export async function deleteAccount(): Promise<ActionState> {
     return { error: describe(err) };
   }
   return { notice: "Your account and all its data are deleted." };
+}
+
+export async function setApplicationStage(id: number, stage: string): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = StageSchema.safeParse(stage);
+  if (!parsed.success) return { error: "Unknown stage." };
+  try {
+    if (!(await applicationRecords().setStage(user.id, id, parsed.data))) {
+      return { error: "That application no longer exists." };
+    }
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  refresh();
+  return {};
 }

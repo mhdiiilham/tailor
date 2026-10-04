@@ -1,4 +1,5 @@
 import type { Application, ApplicationStatus } from "@/domain/application";
+import { CLOSED_STAGES, type Stage } from "@/domain/stage";
 
 // What the dashboard table needs, serializable for the client component.
 export type ApplicationRow = {
@@ -9,10 +10,13 @@ export type ApplicationRow = {
   stack: string[];
   score: number;
   status: ApplicationStatus;
+  stage: Stage;
+  appliedAt: string | null;
   createdAt: string;
 };
 
-export type StatusFilter = "all" | ApplicationStatus;
+// Rejected and Withdrawn are grouped as "closed" for filtering.
+export type StageFilter = "all" | "closed" | Exclude<Stage, "rejected" | "withdrawn">;
 
 export function toRow(app: Application): ApplicationRow {
   return {
@@ -23,22 +27,35 @@ export function toRow(app: Application): ApplicationRow {
     stack: app.job.techStack.slice(0, 4),
     score: app.fit.score,
     status: app.status,
+    stage: app.stage,
+    appliedAt: app.appliedAt?.toISOString() ?? null,
     createdAt: app.createdAt.toISOString(),
   };
 }
 
+export function matchesStage(row: ApplicationRow, filter: StageFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "closed") return CLOSED_STAGES.includes(row.stage);
+  return row.stage === filter;
+}
+
 // Case-insensitive search over role, company, location and stack.
-export function filterRows(rows: ApplicationRow[], query: string, status: StatusFilter): ApplicationRow[] {
+export function filterRows(rows: ApplicationRow[], query: string, filter: StageFilter): ApplicationRow[] {
   const q = query.trim().toLowerCase();
   return rows.filter((r) => {
-    if (status !== "all" && r.status !== status) return false;
+    if (!matchesStage(r, filter)) return false;
     if (!q) return true;
     return [r.role, r.company, r.location, ...r.stack].some((v) => v.toLowerCase().includes(q));
   });
 }
 
 export function summarize(rows: ApplicationRow[]) {
-  const ready = rows.filter((r) => r.status === "generated").length;
   const averageFit = rows.length ? Math.round(rows.reduce((sum, r) => sum + r.score, 0) / rows.length) : null;
-  return { total: rows.length, ready, waiting: rows.length - ready, averageFit };
+  return {
+    total: rows.length,
+    averageFit,
+    applied: rows.filter((r) => r.appliedAt !== null).length,
+    interviewing: rows.filter((r) => r.stage === "interviewing").length,
+    offers: rows.filter((r) => r.stage === "offer").length,
+  };
 }

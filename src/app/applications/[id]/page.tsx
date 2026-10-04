@@ -7,12 +7,15 @@ import { LOW_FIT_THRESHOLD, matchCounts, type FitAnalysis } from "@/domain/fit";
 import { resumeFileName } from "@/domain/slug";
 import { Badge, ButtonAnchor, Card, SectionHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
+import { StageSelect } from "@/components/stageSelect";
 import { DeleteApplication } from "./deleteApplication";
 import { QuestionsForm, ReviseForm } from "./forms";
 import { RequirementsList } from "./requirementsList";
 import { ScoreCard } from "./scoreCard";
 
 export const dynamic = "force-dynamic";
+
+const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 
 // Requirements and stack items, without repeats (a posting often lists "Go" in both).
 function matchedItems(fit: FitAnalysis) {
@@ -78,6 +81,13 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             <Badge tone={label.tone}>{label.text}</Badge>
           </div>
           <p className="text-muted">{app.company}</p>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-faint">
+            <StageSelect id={app.id} stage={app.stage} />
+            {app.appliedAt ? <span>Applied {dateFormat.format(app.appliedAt)}</span> : null}
+            {app.stageUpdatedAt && app.stage !== "applied" && app.stage !== "not_applied" ? (
+              <span>Updated {dateFormat.format(app.stageUpdatedAt)}</span>
+            ) : null}
+          </div>
           {generated ? (
             <div className="flex flex-wrap items-center gap-3">
               <ButtonAnchor href={`/applications/${app.id}/pdf?download=pdf`}>

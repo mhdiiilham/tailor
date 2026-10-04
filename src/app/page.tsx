@@ -21,11 +21,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     profileRepository().findByUser(user.id),
   ]);
   const rows = apps.map(toRow);
-  const { total, averageFit } = summarize(rows);
+  const summary = summarize(rows);
 
   return (
     <div className="grid gap-8">
-      <StatusStrip total={total} averageFit={averageFit} />
+      <StatusStrip {...summary} />
 
       <PageHeader
         title="Applications"
