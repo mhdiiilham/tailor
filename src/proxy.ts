@@ -1,8 +1,9 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
-// The landing page, health check and auth endpoints are public; everything else needs a session.
-const isPublic = (path: string) => path === "/" || path === "/api/health" || path.startsWith("/api/auth");
+// The landing and legal pages, health check and auth endpoints are public; everything else needs a session.
+const PUBLIC_PATHS = ["/", "/privacy", "/terms", "/api/health"];
+const isPublic = (path: string) => PUBLIC_PATHS.includes(path) || path.startsWith("/api/auth");
 
 // A fresh nonce per request lets Next's own inline scripts run while blocking
 // anything injected. That matters because the Gemini key sits in localStorage.

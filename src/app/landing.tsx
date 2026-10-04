@@ -45,7 +45,7 @@ export function Landing({ error }: { error?: string }) {
             </div>
           ))}
         </dl>
-        <p className="text-sm text-faint">Invite only for now. Sign-in works for emails on the list.</p>
+        <p className="text-sm text-faint">Invite only for now, for people 18 and over.</p>
       </section>
     </div>
   );

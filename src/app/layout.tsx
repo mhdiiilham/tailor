@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <body className="min-h-[100dvh] font-sans">
+      <body className="flex min-h-[100dvh] flex-col font-sans">
         <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
             <Link href="/" className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
@@ -53,7 +53,23 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             ) : null}
           </div>
         </header>
-        <main className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-12">{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 md:px-8 md:py-12">{children}</main>
+        <footer className="border-t border-line">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-sm text-faint md:px-8">
+            <span>Tailor. For people 18 and over.</span>
+            <nav className="flex flex-wrap gap-x-5 gap-y-1">
+              <Link href="/privacy" className="hover:text-ink">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-ink">
+                Terms and Conditions
+              </Link>
+              <a href="mailto:hi@muhammadilham.xyz" className="hover:text-ink">
+                Contact
+              </a>
+            </nav>
+          </div>
+        </footer>
       </body>
     </html>
   );
