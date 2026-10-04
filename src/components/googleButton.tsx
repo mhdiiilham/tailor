@@ -10,10 +10,10 @@ export function GoogleButton() {
   return (
     <Button
       disabled={pending}
-      className="w-full sm:w-auto sm:justify-self-start"
+      className="justify-self-start"
       onClick={async () => {
         setPending(true);
-        await authClient.signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/login" });
+        await authClient.signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/?error=access" });
       }}
     >
       <GoogleLogo size={18} weight="bold" />

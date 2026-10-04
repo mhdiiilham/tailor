@@ -12,7 +12,7 @@ export function UserMenu({ name, image }: { name: string; image: string | null }
   async function signOut() {
     setGeminiKey("");
     await authClient.signOut();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 

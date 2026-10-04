@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
-import { requireUser } from "@/infrastructure/auth/session";
+import { getCurrentUser } from "@/infrastructure/auth/session";
+import { Landing } from "./landing";
 import { EmptyState, PageHeader, ButtonLink } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 
-export default async function ApplicationsPage() {
-  const user = await requireUser();
+// Signed out: the public landing page. Signed in: your applications.
+export default async function HomePage({ searchParams }: PageProps<"/">) {
+  const user = await getCurrentUser();
+  if (!user) return <Landing error={(await searchParams).error as string | undefined} />;
+
   const [apps, profile] = await Promise.all([
     applicationRepository().list(user.id),
     profileRepository().findByUser(user.id),
