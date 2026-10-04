@@ -91,6 +91,8 @@ export const applications = pgTable("applications", {
   resume: jsonb("resume").$type<TailoredResume>(),
   typSource: text("typ_source"),
   pdf: bytea("pdf"),
+  // When the stored PDF was made; it's deleted after PDF_RETENTION_MS.
+  pdfCreatedAt: ts("pdf_created_at"),
   status: text("status", { enum: ["questions", "generated"] }).notNull(),
   createdAt: ts("created_at").notNull().defaultNow(),
 });

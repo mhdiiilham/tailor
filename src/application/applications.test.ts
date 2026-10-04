@@ -74,6 +74,12 @@ class MemoryApplications implements ApplicationRepository {
   async list(userId: string) {
     return this.rows.filter((r) => r.userId === userId);
   }
+  async delete() {
+    return false;
+  }
+  async purgePdfsCreatedBefore() {
+    return 0;
+  }
   async update(userId: string, id: number, patch: Partial<NewApplication>) {
     const i = this.rows.findIndex((r) => r.id === id && r.userId === userId);
     this.rows[i] = { ...this.rows[i], ...patch };
@@ -87,13 +93,17 @@ class RecordingRenderer implements ResumeRenderer {
     this.rendered.push(resume);
     return { typSource: "= cv", pdf: Buffer.from("%PDF") };
   }
+  async compile() {
+    return Buffer.from("%PDF");
+  }
 }
 
 function setup(responses: unknown[], stored: Profile | null = profile, userId = "alice") {
   const llm = new FakeLlm(responses);
   const applications = new MemoryApplications();
   const renderer = new RecordingRenderer();
-  const service = new ApplicationService({ userId, llm, profiles: new MemoryProfiles(stored), applications, renderer });
+  const now = () => new Date("2026-10-04T12:00:00Z");
+  const service = new ApplicationService({ userId, now, llm, profiles: new MemoryProfiles(stored), applications, renderer });
   return { llm, applications, renderer, service };
 }
 
@@ -137,6 +147,7 @@ describe("ApplicationService.generate", () => {
     expect(renderer.rendered[0].summary).toBe("Backend engineer, Go.");
     expect(done).toMatchObject({ status: "generated", typSource: "= cv", answers: { lead: "The latency win" } });
     expect(done.pdf?.toString()).toBe("%PDF");
+    expect(done.pdfCreatedAt).toEqual(new Date("2026-10-04T12:00:00Z"));
   });
 
   it("asks once more when the draft uses banned words", async () => {

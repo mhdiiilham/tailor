@@ -29,6 +29,7 @@ const GapQuestionsSchema = z.object({ questions: z.array(z.string()).max(MAX_GAP
 
 export type ApplicationDeps = {
   userId: string;
+  now?: () => Date;
   llm: LlmPort;
   profiles: ProfileRepository;
   applications: ApplicationRepository;
@@ -82,6 +83,7 @@ export class ApplicationService {
       resume: null,
       typSource: null,
       pdf: null,
+      pdfCreatedAt: null,
       status: "questions",
     });
   }
@@ -144,7 +146,15 @@ export class ApplicationService {
     patch: { answers?: Answers },
   ): Promise<Application> {
     const { typSource, pdf } = await this.deps.renderer.render({ profile, resume });
-    return this.deps.applications.update(this.deps.userId, app.id, { ...patch, resume, typSource, pdf, status: "generated" });
+    const pdfCreatedAt = (this.deps.now ?? (() => new Date()))();
+    return this.deps.applications.update(this.deps.userId, app.id, {
+      ...patch,
+      resume,
+      typSource,
+      pdf,
+      pdfCreatedAt,
+      status: "generated",
+    });
   }
 
   private async requireProfile(): Promise<StoredProfile> {

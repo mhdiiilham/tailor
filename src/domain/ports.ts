@@ -31,10 +31,19 @@ export interface ApplicationRepository {
   findById(userId: string, id: number): Promise<Application | null>;
   list(userId: string): Promise<Application[]>;
   update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application>;
+  delete(userId: string, id: number): Promise<boolean>;
+  // Drops stored PDFs made before the cutoff, for every user. Returns how many.
+  purgePdfsCreatedBefore(cutoff: Date): Promise<number>;
+}
+
+export interface AccountRepository {
+  // Removes the user and, through cascades, their sessions, profile and applications.
+  deleteUser(userId: string): Promise<void>;
 }
 
 export type RenderedResume = { typSource: string; pdf: Buffer };
 
 export interface ResumeRenderer {
   render(input: { profile: Profile; resume: TailoredResume }): Promise<RenderedResume>;
+  compile(typSource: string): Promise<Buffer>;
 }

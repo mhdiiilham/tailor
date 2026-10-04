@@ -14,13 +14,17 @@ export class TypstResumeRenderer implements ResumeRenderer {
 
   async render({ profile, resume }: Parameters<ResumeRenderer["render"]>[0]): Promise<RenderedResume> {
     const typSource = renderResumeTypst(profile, resume);
+    return { typSource, pdf: await this.compile(typSource) };
+  }
+
+  async compile(typSource: string): Promise<Buffer> {
     const dir = await mkdtemp(path.join(tmpdir(), "tailor-"));
     const typPath = path.join(dir, "resume.typ");
     const pdfPath = path.join(dir, "resume.pdf");
     try {
       await writeFile(typPath, typSource, "utf8");
       await run(this.typstBin, ["compile", typPath, pdfPath]);
-      return { typSource, pdf: await readFile(pdfPath) };
+      return await readFile(pdfPath);
     } catch (err) {
       const stderr = (err as { stderr?: string }).stderr ?? String(err);
       throw new Error(`typst compile failed:\n${stderr}`);

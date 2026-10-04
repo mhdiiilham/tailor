@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { NewApplication } from "@/domain/application";
 import { ProfileSchema } from "@/domain/profile";
 import type { Db } from "./client";
-import { DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
+import { DrizzleAccountRepository, DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
 import { user } from "./schema";
 import { openTestDb } from "./testDb";
 
@@ -32,6 +32,7 @@ const newApp = (userId: string): NewApplication => ({
   resume: null,
   typSource: null,
   pdf: null,
+  pdfCreatedAt: null,
   status: "questions",
 });
 
@@ -80,5 +81,50 @@ describe("DrizzleApplicationRepository", () => {
     expect(await repo.list("bob")).toEqual([]);
     await expect(repo.update("bob", alices.id, { status: "generated" })).rejects.toThrow(/not found/);
     expect((await repo.findById("alice", alices.id))?.status).toBe("questions");
+  });
+});
+
+describe("deleting", () => {
+  it("deletes only the owner's application", async () => {
+    const repo = new DrizzleApplicationRepository(db);
+    const alices = await repo.create(newApp("alice"));
+
+    expect(await repo.delete("bob", alices.id)).toBe(false);
+    expect(await repo.findById("alice", alices.id)).not.toBeNull();
+
+    expect(await repo.delete("alice", alices.id)).toBe(true);
+    expect(await repo.findById("alice", alices.id)).toBeNull();
+  });
+
+  it("removes an account with its profile and applications, leaving others alone", async () => {
+    const apps = new DrizzleApplicationRepository(db);
+    const profiles = new DrizzleProfileRepository(db);
+    await profiles.saveForUser("alice", profile);
+    await profiles.saveForUser("bob", profile);
+    await apps.create(newApp("alice"));
+    const bobs = await apps.create(newApp("bob"));
+
+    await new DrizzleAccountRepository(db).deleteUser("alice");
+
+    expect(await profiles.findByUser("alice")).toBeNull();
+    expect(await apps.list("alice")).toEqual([]);
+    expect(await profiles.findByUser("bob")).not.toBeNull();
+    expect((await apps.findById("bob", bobs.id))?.id).toBe(bobs.id);
+  });
+});
+
+describe("purgePdfsCreatedBefore", () => {
+  it("drops old PDFs but keeps newer ones and the Typst source", async () => {
+    const repo = new DrizzleApplicationRepository(db);
+    const pdf = Buffer.from("%PDF");
+    const old = await repo.create({ ...newApp("alice"), pdf, typSource: "= old", pdfCreatedAt: new Date("2026-10-01T00:00:00Z") });
+    const fresh = await repo.create({ ...newApp("bob"), pdf, typSource: "= new", pdfCreatedAt: new Date("2026-10-04T00:00:00Z") });
+
+    expect(await repo.purgePdfsCreatedBefore(new Date("2026-10-03T00:00:00Z"))).toBe(1);
+
+    const purged = await repo.findById("alice", old.id);
+    expect(purged?.pdf).toBeNull();
+    expect(purged?.typSource).toBe("= old");
+    expect((await repo.findById("bob", fresh.id))?.pdf?.toString()).toBe("%PDF");
   });
 });

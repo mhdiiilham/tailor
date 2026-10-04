@@ -1,9 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
 import type { Application, NewApplication } from "@/domain/application";
-import type { ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
+import type { AccountRepository, ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
 import type { Db } from "./client";
-import { applications, profiles } from "./schema";
+import { applications, profiles, user } from "./schema";
 
 export class DrizzleProfileRepository implements ProfileRepository {
   constructor(private readonly db: Db) {}
@@ -51,5 +51,30 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
       .returning();
     if (!row) throw new Error(`application ${id} not found`);
     return row;
+  }
+
+  async delete(userId: string, id: number): Promise<boolean> {
+    const rows = await this.db
+      .delete(applications)
+      .where(and(eq(applications.id, id), eq(applications.userId, userId)))
+      .returning({ id: applications.id });
+    return rows.length > 0;
+  }
+
+  async purgePdfsCreatedBefore(cutoff: Date): Promise<number> {
+    const rows = await this.db
+      .update(applications)
+      .set({ pdf: null, pdfCreatedAt: null })
+      .where(and(isNotNull(applications.pdf), lt(applications.pdfCreatedAt, cutoff)))
+      .returning({ id: applications.id });
+    return rows.length;
+  }
+}
+
+export class DrizzleAccountRepository implements AccountRepository {
+  constructor(private readonly db: Db) {}
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.db.delete(user).where(eq(user.id, userId));
   }
 }

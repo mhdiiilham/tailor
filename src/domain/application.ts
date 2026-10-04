@@ -18,6 +18,7 @@ export type Application = {
   resume: TailoredResume | null;
   typSource: string | null;
   pdf: Buffer | null;
+  pdfCreatedAt: Date | null;
   status: ApplicationStatus;
   createdAt: Date;
 };
