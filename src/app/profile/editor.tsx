@@ -1,47 +1,44 @@
 "use client";
 
-import { useActionState } from "react";
-import { importProfileYaml, saveProfile, type ActionState } from "@/app/actions";
-import { Field, FormMessage, SubmitButton } from "@/components/ui";
-import { inputStyles } from "@/components/styles";
-
-export function ImportProfileButton({ replacing }: { replacing: boolean }) {
-  const [state, action] = useActionState<ActionState>(importProfileYaml, {});
-  return (
-    <form
-      action={action}
-      onSubmit={(e) => {
-        if (replacing && !confirm("Replace the saved profile with profile.yaml? Edits made here will be lost.")) {
-          e.preventDefault();
-        }
-      }}
-      className="grid gap-2 md:justify-items-end"
-    >
-      <SubmitButton variant={replacing ? "secondary" : "primary"} pendingLabel="Importing...">
-        {replacing ? "Re-import profile.yaml" : "Import profile.yaml"}
-      </SubmitButton>
-      <FormMessage {...state} />
-    </form>
-  );
-}
+import { useActionState, useRef } from "react";
+import { saveProfile, type ActionState } from "@/app/actions";
+import { Field, FormMessage, SubmitButton, TextArea, buttonClass } from "@/components/ui";
 
 export function ProfileEditor({ initialYaml }: { initialYaml: string }) {
   const [state, action] = useActionState<ActionState, FormData>(saveProfile, {});
+  const textarea = useRef<HTMLTextAreaElement>(null);
+
+  // Reads the file in the browser and drops it into the editor; saving validates it.
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && textarea.current) textarea.current.value = await file.text();
+    e.target.value = "";
+  }
+
   return (
     <form action={action} className="grid gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label htmlFor="yaml" className="text-sm font-medium">
+          Profile YAML
+        </label>
+        <label className={buttonClass("secondary", "cursor-pointer")}>
+          Upload profile.yaml
+          <input type="file" accept=".yaml,.yml,text/yaml" onChange={upload} className="sr-only" />
+        </label>
+      </div>
       <Field
-        label="Edit profile"
         htmlFor="yaml"
-        hint="Same shape as profile.yaml. Dates are YYYY-MM, or present. Saved to the local database, not back to the file."
+        hint="Same shape as profile.yaml. Uploading replaces the text here; nothing is saved until you press Save."
       >
-        <textarea
+        <TextArea
+          ref={textarea}
           id="yaml"
           name="yaml"
           defaultValue={initialYaml}
           rows={28}
           spellCheck={false}
           wrap="off"
-          className={`${inputStyles} font-mono text-[13px]`}
+          mono
         />
       </Field>
       <FormMessage {...state} />

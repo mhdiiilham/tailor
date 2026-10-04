@@ -1,9 +1,11 @@
-import { stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { notFound } from "next/navigation";
 import { Check, CircleHalf, Minus } from "@phosphor-icons/react/dist/ssr";
-import { applicationRepository } from "@/container";
+import { applicationRepository, profileRepository } from "@/container";
 import { LOW_FIT_THRESHOLD, type FitAnalysis, type Match } from "@/domain/fit";
-import { buttonStyles } from "@/components/styles";
+import { resumeFileName } from "@/domain/slug";
+import { requireUser } from "@/infrastructure/auth/session";
+import { ButtonAnchor, Card, PageHeader, SectionHeader } from "@/components/ui";
 import { QuestionsForm, ReviseForm } from "./forms";
 
 export const dynamic = "force-dynamic";
@@ -25,36 +27,36 @@ function matchedItems(fit: FitAnalysis) {
 }
 
 export default async function ApplicationPage({ params }: PageProps<"/applications/[id]">) {
+  const user = await requireUser();
   const { id } = await params;
-  const app = await applicationRepository().findById(Number(id));
+  const app = await applicationRepository().findById(user.id, Number(id));
   if (!app) notFound();
+  const profile = await profileRepository().findByUser(user.id);
 
   const { fit, job } = app;
   const items = matchedItems(fit);
   const low = fit.score < LOW_FIT_THRESHOLD;
   // Changes whenever the PDF is regenerated, so the preview never shows a stale copy.
-  const pdfVersion = app.pdfPath ? Math.round((await stat(app.pdfPath).catch(() => null))?.mtimeMs ?? 0) : 0;
+  const pdfVersion = app.pdf ? createHash("sha1").update(app.pdf).digest("hex").slice(0, 10) : "";
+  const fileName = resumeFileName(app.company, profile?.profile.personal.name ?? user.name, "pdf");
 
   return (
     <div className="grid gap-12">
-      <header className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
-        <div className="grid gap-2">
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">{app.role}</h1>
-          <p className="text-muted">
-            {app.company}
-            {job.location ? `, ${job.location}` : ""}
-          </p>
-        </div>
-        <div className="flex items-baseline gap-1 md:justify-end">
-          <span className={`font-mono text-5xl font-medium tabular-nums ${low ? "text-danger" : "text-accent"}`}>
-            {fit.score}
-          </span>
-          <span className="font-mono text-sm text-faint">/100 fit</span>
-        </div>
-      </header>
+      <PageHeader
+        title={app.role}
+        description={`${app.company}${job.location ? `, ${job.location}` : ""}`}
+        action={
+          <div className="flex items-baseline gap-1">
+            <span className={`font-mono text-5xl font-medium tabular-nums ${low ? "text-danger" : "text-accent"}`}>
+              {fit.score}
+            </span>
+            <span className="font-mono text-sm text-faint">/100 fit</span>
+          </div>
+        }
+      />
 
       {low ? (
-        <section className="grid gap-3 rounded-ui border border-line bg-raised p-5">
+        <Card>
           <h2 className="font-medium">Worth applying? Your call.</h2>
           <p className="text-sm text-muted">This one scores below {LOW_FIT_THRESHOLD}. The biggest gaps:</p>
           <ul className="grid list-disc gap-1 pl-5 text-sm">
@@ -62,11 +64,11 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
               <li key={b}>{b}</li>
             ))}
           </ul>
-        </section>
+        </Card>
       ) : null}
 
       <section className="grid gap-5">
-        <h2 className="text-lg font-medium">Requirements and stack</h2>
+        <SectionHeader title="Requirements and stack" />
         <div className="grid gap-8 md:grid-cols-3">
           {GROUPS.map(({ match, label, icon: Icon }) => {
             const group = items.filter((i) => i.match === match);
@@ -107,10 +109,10 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
 
       {app.status === "questions" ? (
         <section className="grid max-w-3xl gap-5">
-          <div className="grid gap-1">
-            <h2 className="text-lg font-medium">A few questions first</h2>
-            <p className="text-sm text-muted">Short answers are fine. Skip any you don’t care about.</p>
-          </div>
+          <SectionHeader
+            title="A few questions first"
+            description="Short answers are fine. Skip any you don’t care about."
+          />
           <QuestionsForm id={app.id} questions={app.questions} answers={app.answers ?? {}} />
         </section>
       ) : (
@@ -122,10 +124,14 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           />
           <aside className="grid content-start gap-8">
             <div className="grid gap-3">
-              <a href={`/applications/${app.id}/pdf`} target="_blank" className={buttonStyles.primary}>
-                Open PDF
+              <ButtonAnchor href={`/applications/${app.id}/pdf?download=pdf`}>Download PDF</ButtonAnchor>
+              <p className="break-all font-mono text-xs text-faint">{fileName}</p>
+              <a
+                href={`/applications/${app.id}/pdf?download=typ`}
+                className="text-sm text-muted underline hover:text-ink"
+              >
+                Download Typst source
               </a>
-              <p className="break-all font-mono text-xs text-faint">{app.pdfPath}</p>
             </div>
             {app.resume?.decisions.length ? (
               <div className="grid gap-2">
@@ -139,7 +145,9 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             ) : null}
             <ReviseForm id={app.id} />
             <details className="group">
-              <summary className="cursor-pointer text-sm text-muted hover:text-ink">Change answers and regenerate</summary>
+              <summary className="cursor-pointer text-sm text-muted hover:text-ink">
+                Change answers and regenerate
+              </summary>
               <div className="pt-4">
                 <QuestionsForm id={app.id} questions={app.questions} answers={app.answers ?? {}} />
               </div>

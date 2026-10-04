@@ -1,41 +1,41 @@
 "use server";
 
-import { readFile } from "node:fs/promises";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { NoProfileError, NotFoundError } from "@/application/applications";
-import { applicationService, paths, profileRepository } from "@/container";
+import { InvalidApiKeyError, MissingApiKeyError, RateLimitedError, scrubSecret } from "@/domain/errors";
+import { applicationServiceFor, geminiFor, profileRepository } from "@/container";
+import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 
 export type ActionState = { error?: string; notice?: string };
 
-function describe(err: unknown): string {
+const KNOWN_ERRORS = [NoProfileError, NotFoundError, MissingApiKeyError, InvalidApiKeyError, RateLimitedError];
+
+// Turns any failure into text for the page. The Gemini key is scrubbed from
+// everything, so it can't leak through an error message or the server log.
+function describe(err: unknown, geminiKey?: string): string {
+  let message: string;
   if (err instanceof ZodError) {
-    return err.issues
+    message = err.issues
       .map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message))
       .join("\n");
+  } else if (KNOWN_ERRORS.some((E) => err instanceof E)) {
+    message = (err as Error).message;
+  } else {
+    console.error("[action]", scrubSecret(err instanceof Error ? (err.stack ?? err.message) : String(err), geminiKey));
+    message = err instanceof Error ? err.message : "Something went wrong.";
   }
-  if (err instanceof NoProfileError || err instanceof NotFoundError) return err.message;
-  if (err instanceof Error) return err.message;
-  return "Something went wrong.";
+  return scrubSecret(message, geminiKey);
 }
 
-export async function importProfileYaml(): Promise<ActionState> {
-  try {
-    const profile = parseProfileYaml(await readFile(paths.profileYaml, "utf8"));
-    await profileRepository().saveDefault(profile);
-  } catch (err) {
-    return { error: `Couldn't import ${paths.profileYaml}.\n${describe(err)}` };
-  }
-  refresh();
-  return { notice: "Imported profile.yaml." };
-}
+const field = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
 
 export async function saveProfile(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
   try {
-    const profile = parseProfileYaml(String(form.get("yaml") ?? ""));
-    await profileRepository().saveDefault(profile);
+    await profileRepository().saveForUser(user.id, parseProfileYaml(field(form, "yaml")));
   } catch (err) {
     return { error: describe(err) };
   }
@@ -46,41 +46,58 @@ export async function saveProfile(_prev: ActionState, form: FormData): Promise<A
 const MIN_JD_LENGTH = 200;
 
 export async function startApplication(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const jd = String(form.get("jd") ?? "").trim();
+  const user = await requireUser();
+  const jd = field(form, "jd");
+  const key = field(form, "geminiKey");
   if (jd.length < MIN_JD_LENGTH) {
     return { error: "That looks too short for a job description. Paste the whole posting." };
   }
   let id: number;
   try {
-    id = (await applicationService().start(jd)).id;
+    id = (await applicationServiceFor(user.id, key).start(jd)).id;
   } catch (err) {
-    return { error: describe(err) };
+    return { error: describe(err, key) };
   }
   redirect(`/applications/${id}`);
 }
 
 export async function generateResume(id: number, _prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  const key = field(form, "geminiKey");
   const answers: Record<string, string> = {};
-  for (const [key, value] of form.entries()) {
-    if (key.startsWith("q:")) answers[key.slice(2)] = String(value);
+  for (const [name, value] of form.entries()) {
+    if (name.startsWith("q:")) answers[name.slice(2)] = String(value);
   }
   try {
-    await applicationService().generate(id, answers);
+    await applicationServiceFor(user.id, key).generate(id, answers);
   } catch (err) {
-    return { error: describe(err) };
+    return { error: describe(err, key) };
   }
   refresh();
   return {};
 }
 
 export async function reviseResume(id: number, _prev: ActionState, form: FormData): Promise<ActionState> {
-  const feedback = String(form.get("feedback") ?? "").trim();
+  const user = await requireUser();
+  const key = field(form, "geminiKey");
+  const feedback = field(form, "feedback");
   if (!feedback) return { error: "Say what you want changed." };
   try {
-    await applicationService().revise(id, feedback);
+    await applicationServiceFor(user.id, key).revise(id, feedback);
   } catch (err) {
-    return { error: describe(err) };
+    return { error: describe(err, key) };
   }
   refresh();
   return { notice: "Updated." };
+}
+
+// Checks a key with one tiny call. Nothing is stored on the server.
+export async function testGeminiKey(key: string): Promise<ActionState> {
+  await requireUser();
+  try {
+    await geminiFor(key).ping();
+  } catch (err) {
+    return { error: describe(err, key) };
+  }
+  return { notice: "Key works." };
 }
