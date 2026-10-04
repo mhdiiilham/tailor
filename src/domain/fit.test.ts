@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { coverage, fitScore, type FitJudgement } from "./fit";
+import { coverage, fitScore, matchCounts, normalizeFit, type FitAnalysis, type FitJudgement } from "./fit";
 
-const item = (match: "HAVE" | "PARTIAL" | "MISSING") => ({ item: "x", match, evidence: "" });
+const item = (match: "HAVE" | "PARTIAL" | "MISSING") => ({ item: "x", match, evidence: "", tag: "" });
 
 const judgement = (over: Partial<FitJudgement> = {}): FitJudgement => ({
   requirements: [],
@@ -40,5 +40,25 @@ describe("fitScore", () => {
       }),
     );
     expect(score).toBe(40);
+  });
+});
+
+describe("normalizeFit", () => {
+  it("upgrades sentence angles and untagged items from older analyses", () => {
+    const legacy = {
+      ...judgement({ requirements: [{ item: "Go", match: "HAVE", evidence: "PGL" }] as never }),
+      angles: ["Cut latency 90%"] as never,
+      score: 80,
+    } as FitAnalysis;
+    const fit = normalizeFit(legacy);
+    expect(fit.angles).toEqual([{ title: "", detail: "Cut latency 90%", source: "", jdQuote: "" }]);
+    expect(fit.requirements[0].tag).toBe("");
+  });
+});
+
+describe("matchCounts", () => {
+  it("counts requirements and stack items by match", () => {
+    const fit = { ...judgement({ requirements: [item("HAVE"), item("MISSING")], techStack: [item("HAVE"), item("PARTIAL")] }), score: 0 };
+    expect(matchCounts(fit)).toEqual({ HAVE: 2, PARTIAL: 1, MISSING: 1 });
   });
 });

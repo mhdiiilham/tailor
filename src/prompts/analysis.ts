@@ -12,7 +12,10 @@ For every requirement, tech stack item and nice-to-have in the posting, mark it:
 Only use what is written in the profile. Never assume skills that are not there.
 experienceLevel (0-100): how well seniority, years and domain match what the role signals.
 domainFit (0-100): how relevant the candidate's industries are to this company.
-angles: the 2-3 concrete achievements from the profile that most directly match this role.
+tag: 2-3 words naming how it matches (e.g. "Primary stack", "MariaDB ~ MySQL", "Bootcamp only"). No hype words.
+angles: the 2-3 concrete achievements from the profile that most directly match this role. For each give a short
+title, one or two sentences of evidence with real numbers from the profile, the company or project it comes from,
+and the job requirement it answers (quote the posting).
 blockers: required items the candidate clearly lacks. Be honest and specific.`;
 
 export const QUESTIONS_SYSTEM = `You write clarifying questions before a resume is tailored for a specific job.

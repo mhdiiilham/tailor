@@ -3,7 +3,7 @@ import type { NewApplication } from "@/domain/application";
 import { ProfileSchema } from "@/domain/profile";
 import type { Db } from "./client";
 import { DrizzleAccountRepository, DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
-import { user } from "./schema";
+import { applications, user } from "./schema";
 import { openTestDb } from "./testDb";
 
 const profile = ProfileSchema.parse({ personal: { name: "Ada" } });
@@ -126,5 +126,19 @@ describe("purgePdfsCreatedBefore", () => {
     expect(purged?.pdf).toBeNull();
     expect(purged?.typSource).toBe("= old");
     expect((await repo.findById("bob", fresh.id))?.pdf?.toString()).toBe("%PDF");
+  });
+});
+
+describe("older saved analyses", () => {
+  it("come back with structured angles and tags", async () => {
+    const legacyFit = { ...newApp("alice").fit, angles: ["Cut latency 90%"], requirements: [{ item: "Go", match: "HAVE", evidence: "PGL" }] };
+    const [row] = await db
+      .insert(applications)
+      .values({ ...newApp("alice"), fit: legacyFit as never })
+      .returning({ id: applications.id });
+
+    const app = await new DrizzleApplicationRepository(db).findById("alice", row.id);
+    expect(app?.fit.angles[0]).toEqual({ title: "", detail: "Cut latency 90%", source: "", jdQuote: "" });
+    expect(app?.fit.requirements[0].tag).toBe("");
   });
 });

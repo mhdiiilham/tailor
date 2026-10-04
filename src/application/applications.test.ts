@@ -31,10 +31,10 @@ const job: JobPosting = {
 
 const judgement: FitJudgement = {
   requirements: [
-    { item: "Go", match: "HAVE", evidence: "New Co" },
-    { item: "Kafka", match: "MISSING", evidence: "" },
+    { item: "Go", match: "HAVE", evidence: "New Co", tag: "" },
+    { item: "Kafka", match: "MISSING", evidence: "", tag: "" },
   ],
-  techStack: [{ item: "Go", match: "HAVE", evidence: "" }],
+  techStack: [{ item: "Go", match: "HAVE", evidence: "", tag: "" }],
   niceToHaves: [],
   experienceLevel: 80,
   domainFit: 60,

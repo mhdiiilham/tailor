@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
 import type { Application, NewApplication } from "@/domain/application";
+import { normalizeFit } from "@/domain/fit";
 import type { AccountRepository, ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
 import type { Db } from "./client";
@@ -23,12 +24,15 @@ export class DrizzleProfileRepository implements ProfileRepository {
   }
 }
 
+// Rows written before a schema change can hold older JSON shapes; upgrade on read.
+const toApplication = (row: Application): Application => ({ ...row, fit: normalizeFit(row.fit) });
+
 export class DrizzleApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Db) {}
 
   async create(app: NewApplication): Promise<Application> {
     const [row] = await this.db.insert(applications).values(app).returning();
-    return row;
+    return toApplication(row);
   }
 
   async findById(userId: string, id: number): Promise<Application | null> {
@@ -36,11 +40,16 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
       .select()
       .from(applications)
       .where(and(eq(applications.id, id), eq(applications.userId, userId)));
-    return row ?? null;
+    return row ? toApplication(row) : null;
   }
 
   async list(userId: string): Promise<Application[]> {
-    return this.db.select().from(applications).where(eq(applications.userId, userId)).orderBy(desc(applications.id));
+    const rows = await this.db
+      .select()
+      .from(applications)
+      .where(eq(applications.userId, userId))
+      .orderBy(desc(applications.id));
+    return rows.map(toApplication);
   }
 
   async update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application> {
@@ -50,7 +59,7 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
       .where(and(eq(applications.id, id), eq(applications.userId, userId)))
       .returning();
     if (!row) throw new Error(`application ${id} not found`);
-    return row;
+    return toApplication(row);
   }
 
   async delete(userId: string, id: number): Promise<boolean> {
