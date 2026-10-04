@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { startApplication, type ActionState } from "@/app/actions";
 import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
-import { FormMessage, SubmitButton, TextArea } from "@/components/ui";
+import { FormMessage, PendingSteps, SubmitButton, TextArea } from "@/components/ui";
+import { ANALYZE_NOTE, ANALYZE_STEPS } from "./analyzeSteps";
 
 // The quick-paste panel on the dashboard. The full page is ./workspace.
 export function NewApplicationForm() {
@@ -20,6 +21,7 @@ export function NewApplicationForm() {
           aria-label="Job description"
           placeholder="Paste the full job description here"
         />
+        <PendingSteps title="Analyzing your fit" steps={ANALYZE_STEPS} note={ANALYZE_NOTE} />
         <FormMessage {...state} />
         <div className="flex justify-end">
           <SubmitButton pendingLabel="Reading the posting...">Analyze fit</SubmitButton>

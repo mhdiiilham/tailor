@@ -4,7 +4,8 @@ import { CheckCircle, Info, Warning } from "@phosphor-icons/react";
 import { useActionState, useMemo, useRef, useState } from "react";
 import { startApplication, type ActionState } from "@/app/actions";
 import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
-import { Badge, Button, Card, FormMessage, SectionHeader, SubmitButton } from "@/components/ui";
+import { Badge, Button, Card, FormMessage, PendingSteps, SectionHeader, SubmitButton } from "@/components/ui";
+import { ANALYZE_NOTE, ANALYZE_STEPS } from "./analyzeSteps";
 import { checkTerms, looksComplete } from "@/domain/techTerms";
 
 // Gemini counts roughly four characters per token for English text.
@@ -115,6 +116,7 @@ export function NewApplicationWorkspace({ terms, profileCard }: { terms: string[
             className="block w-full resize-y bg-raised px-5 py-4 font-mono text-[13.5px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
           />
           <div className="grid gap-3 border-t border-line bg-sunken px-5 py-3">
+            <PendingSteps title="Analyzing your fit" steps={ANALYZE_STEPS} note={ANALYZE_NOTE} />
             <FormMessage {...state} />
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Button variant="ghost" className="px-3" onClick={() => setText("")} disabled={!text}>

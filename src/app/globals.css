@@ -75,3 +75,13 @@ body {
 ::selection {
   background: var(--accent-soft);
 }
+
+/* Indeterminate progress bar for PendingSteps. */
+@keyframes pending-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
