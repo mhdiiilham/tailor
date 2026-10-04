@@ -7,20 +7,33 @@ import { ApplicationRecords } from "./records";
 const now = new Date("2026-10-04T12:00:00Z");
 
 const app = (over: Partial<Application>): Application =>
-  ({ id: 1, userId: "alice", company: "Acme", typSource: "= cv", pdf: null, pdfCreatedAt: null, ...over }) as Application;
+  ({
+    id: 1,
+    userId: "alice",
+    company: "Acme",
+    typSource: "= cv",
+    pdf: null,
+    pdfCreatedAt: null,
+    stage: "not_applied",
+    stageUpdatedAt: null,
+    appliedAt: null,
+    ...over,
+  }) as Application;
 
 function setup(stored: Application | null) {
   const compiled: string[] = [];
   const cutoffs: Date[] = [];
+  const updates: unknown[] = [];
   const applications = {
     findById: async (userId: string) => (stored && stored.userId === userId ? stored : null),
+    update: async (_u: string, _id: number, patch: Partial<Application>) => (updates.push(patch), { ...stored!, ...patch }),
     delete: async () => true,
     purgePdfsCreatedBefore: async (cutoff: Date) => (cutoffs.push(cutoff), 2),
   } as unknown as ApplicationRepository;
   const renderer = {
     compile: async (src: string) => (compiled.push(src), Buffer.from("%PDF-rebuilt")),
   } as unknown as ResumeRenderer;
-  return { records: new ApplicationRecords({ applications, renderer, now: () => now }), compiled, cutoffs };
+  return { records: new ApplicationRecords({ applications, renderer, now: () => now }), compiled, cutoffs, updates };
 }
 
 describe("ApplicationRecords.pdfFor", () => {
@@ -53,5 +66,23 @@ describe("ApplicationRecords.purgeExpiredPdfs", () => {
     const { records, cutoffs } = setup(null);
     expect(await records.purgeExpiredPdfs()).toBe(2);
     expect(cutoffs[0]).toEqual(new Date(now.getTime() - PDF_RETENTION_MS));
+  });
+});
+
+describe("ApplicationRecords.setStage", () => {
+  it("moves the stage and records when it applied", async () => {
+    const { records } = setup(app({}));
+    expect(await records.setStage("alice", 1, "applied")).toMatchObject({ stage: "applied", appliedAt: now, stageUpdatedAt: now });
+  });
+
+  it("skips the write when the stage is unchanged", async () => {
+    const { records, updates } = setup(app({ stage: "applied" }));
+    await records.setStage("alice", 1, "applied");
+    expect(updates).toEqual([]);
+  });
+
+  it("returns nothing for another user's application", async () => {
+    const { records } = setup(app({}));
+    expect(await records.setStage("bob", 1, "offer")).toBeNull();
   });
 });

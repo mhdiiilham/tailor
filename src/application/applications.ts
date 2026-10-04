@@ -85,6 +85,9 @@ export class ApplicationService {
       pdf: null,
       pdfCreatedAt: null,
       status: "questions",
+      stage: "not_applied",
+      stageUpdatedAt: null,
+      appliedAt: null,
     });
   }
 

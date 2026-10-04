@@ -34,6 +34,9 @@ const newApp = (userId: string): NewApplication => ({
   pdf: null,
   pdfCreatedAt: null,
   status: "questions",
+  stage: "not_applied",
+  stageUpdatedAt: null,
+  appliedAt: null,
 });
 
 beforeEach(async () => {
@@ -140,5 +143,17 @@ describe("older saved analyses", () => {
     const app = await new DrizzleApplicationRepository(db).findById("alice", row.id);
     expect(app?.fit.angles[0]).toEqual({ title: "", detail: "Cut latency 90%", source: "", jdQuote: "" });
     expect(app?.fit.requirements[0].tag).toBe("");
+  });
+});
+
+describe("stage", () => {
+  it("defaults to Not applied and stores stage changes", async () => {
+    const repo = new DrizzleApplicationRepository(db);
+    const app = await repo.create(newApp("alice"));
+    expect(app.stage).toBe("not_applied");
+
+    const when = new Date("2026-10-05T09:00:00Z");
+    const updated = await repo.update("alice", app.id, { stage: "interviewing", stageUpdatedAt: when, appliedAt: when });
+    expect(updated).toMatchObject({ stage: "interviewing", appliedAt: when });
   });
 });

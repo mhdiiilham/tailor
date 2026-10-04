@@ -4,6 +4,7 @@ import type { JobPosting } from "@/domain/job";
 import type { Profile } from "@/domain/profile";
 import type { Answers, Question } from "@/domain/questions";
 import type { TailoredResume } from "@/domain/resume";
+import { STAGES } from "@/domain/stage";
 
 // Drizzle has no built-in bytea column; PDFs are stored as raw bytes.
 const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
@@ -94,5 +95,8 @@ export const applications = pgTable("applications", {
   // When the stored PDF was made; it's deleted after PDF_RETENTION_MS.
   pdfCreatedAt: ts("pdf_created_at"),
   status: text("status", { enum: ["questions", "generated"] }).notNull(),
+  stage: text("stage", { enum: STAGES }).notNull().default("not_applied"),
+  stageUpdatedAt: ts("stage_updated_at"),
+  appliedAt: ts("applied_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });

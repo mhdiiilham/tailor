@@ -15,6 +15,13 @@
       "when": 1791101535281,
       "tag": "0001_pdf_created_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791103463430,
+      "tag": "0002_application_stage",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
 import type { ApplicationRepository, ResumeRenderer } from "@/domain/ports";
 import { isPdfExpired, pdfExpiryCutoff } from "@/domain/retention";
+import { moveToStage, type Stage } from "@/domain/stage";
+import type { Application } from "@/domain/application";
 
 export type RecordsDeps = {
   applications: ApplicationRepository;
@@ -23,6 +25,15 @@ export class ApplicationRecords {
     const fresh = app.pdf && !isPdfExpired(app.pdfCreatedAt, this.now());
     const pdf = fresh ? app.pdf! : await this.deps.renderer.compile(app.typSource);
     return { pdf, typSource: app.typSource, company: app.company };
+  }
+
+  // Moves the application along the job hunt (Applied, Interviewing, ...).
+  async setStage(userId: string, id: number, stage: Stage): Promise<Application | null> {
+    const app = await this.deps.applications.findById(userId, id);
+    if (!app) return null;
+    const next = moveToStage(app, stage, this.now());
+    if (next.stage === app.stage) return app;
+    return this.deps.applications.update(userId, id, next);
   }
 
   async delete(userId: string, id: number): Promise<boolean> {
