@@ -135,7 +135,13 @@ export function ApplicationsTable({ rows }: { rows: ApplicationRow[] }) {
                     <a href={`/applications/${row.id}`} className="truncate font-medium hover:text-accent">
                       {row.role}
                     </a>
-                    {row.location ? <Badge mono>{row.location}</Badge> : null}
+                    {row.location ? (
+                      <span className="flex min-w-0 max-w-64">
+                        <Badge mono truncate>
+                          {row.location}
+                        </Badge>
+                      </span>
+                    ) : null}
                     {row.status === "questions" ? <Badge tone="warn">Answer questions</Badge> : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

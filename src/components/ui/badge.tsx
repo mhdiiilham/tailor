@@ -11,22 +11,27 @@ const tones: Record<BadgeTone, string> = {
 };
 
 // Small status or metadata label. `mono` for technical values like "MariaDB ~ MySQL".
+// `truncate` is for free text that can be long (a full street address, say): it
+// shortens with "…" to fit its container and shows the full text on hover.
 export function Badge({
   tone = "neutral",
   mono = false,
+  truncate = false,
   children,
 }: {
   tone?: BadgeTone;
   mono?: boolean;
+  truncate?: boolean;
   children: ReactNode;
 }) {
   return (
     <span
+      title={truncate && typeof children === "string" ? children : undefined}
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-chip border px-2 py-0.5 text-xs font-medium ${
         mono ? "font-mono" : ""
-      } ${tones[tone]}`}
+      } ${truncate ? "min-w-0 max-w-full" : ""} ${tones[tone]}`}
     >
-      {children}
+      {truncate ? <span className="truncate">{children}</span> : children}
     </span>
   );
 }
