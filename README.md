@@ -40,6 +40,13 @@ The image is built by GitHub Actions (`.github/workflows/tailor-image.yml`) on e
 
 Back up the Postgres database (Coolify can schedule backups for its database resources). Typst 0.15.1 and the resume template package are baked into the image, so PDF builds don't download anything at runtime. Building the image needs about 1.5 GB of RAM, which is why it happens in GitHub Actions rather than on the server.
 
+## Your data
+
+- Stored per user in Postgres: profile, and per application the job description, answers, resume content and Typst source.
+- **PDFs expire after 24 hours.** The server deletes stored PDFs on start and every 15 minutes. Downloading an older resume rebuilds the PDF from its Typst source without storing it again.
+- **Delete** an application from its page, or your whole account (profile, applications, sign-in) from Settings.
+- The Gemini key is never stored on the server. Your profile and job descriptions are sent to Google's Gemini API to write the resume.
+
 ## Models and cost
 
 Two Gemini models: `GEMINI_MODEL_FAST` (job extraction, fit analysis, questions) and `GEMINI_MODEL_WRITE` (the resume). The free tier costs nothing; on a paid key a resume is a few cents. Each model call logs its token usage to the server console.
