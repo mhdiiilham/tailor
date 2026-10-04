@@ -60,7 +60,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
   const fileName = resumeFileName(app.company, profile?.profile.personal.name ?? user.name, "pdf");
 
   return (
-    <div className="grid gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-faint">
         <Link href="/" className="hover:text-ink">
           Applications
@@ -69,10 +69,14 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
         <span className="truncate text-muted">{app.role}</span>
       </nav>
 
-      <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center">
-        <div className="grid gap-4">
+      <header className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center">
+        <div className="grid min-w-0 grid-cols-1 gap-4">
           <div className="flex flex-wrap gap-2">
-            {job.location ? <Badge tone="accent">{job.location}</Badge> : null}
+            {job.location ? (
+              <Badge tone="accent" truncate>
+                {job.location}
+              </Badge>
+            ) : null}
             {job.yearsRequired ? <Badge mono>{job.yearsRequired}+ yrs asked</Badge> : null}
             {job.techStack.slice(0, 3).map((t) => (
               <Badge key={t} mono>
@@ -119,7 +123,12 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
         ))}
       </nav>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <div
+        className={`grid grid-cols-1 items-start gap-6 ${
+          // Once there's a resume it gets the wide column; before that, the questions sit beside the match.
+          generated ? "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : "lg:grid-cols-[minmax(0,1fr)_440px]"
+        }`}
+      >
         <div id="match" className="grid scroll-mt-24 gap-6">
           {fit.score < LOW_FIT_THRESHOLD && fit.blockers.length > 0 ? (
             <Card className="border-danger/30">
@@ -186,6 +195,15 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
                 </p>
               </Card>
 
+              <section id="cover-letter" className="scroll-mt-24">
+                <CoverLetterPanel id={app.id} text={app.coverLetter} />
+                <ScrollToResult
+                  key={app.coverLetter ? createHash("sha1").update(app.coverLetter).digest("hex") : "none"}
+                  applicationId={app.id}
+                  targetId="cover-letter"
+                />
+              </section>
+
               {app.resume?.decisions.length ? (
                 <Card className="border-accent/30">
                   <h2 className="flex items-center gap-2 font-medium text-accent">
@@ -223,17 +241,6 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           )}
         </div>
       </div>
-
-      {generated ? (
-        <section id="cover-letter" className="scroll-mt-24">
-          <CoverLetterPanel id={app.id} text={app.coverLetter} />
-          <ScrollToResult
-            key={app.coverLetter ? createHash("sha1").update(app.coverLetter).digest("hex") : "none"}
-            applicationId={app.id}
-            targetId="cover-letter"
-          />
-        </section>
-      ) : null}
 
       <section id="job" className="scroll-mt-24">
         <Card>
