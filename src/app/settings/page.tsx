@@ -6,7 +6,7 @@ import { GeminiKeySettings } from "./geminiKeySettings";
 export default async function SettingsPage() {
   const user = await requireUser();
   return (
-    <div className="grid max-w-2xl gap-10">
+    <div className="grid max-w-2xl gap-6">
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
       <DeleteAccount />

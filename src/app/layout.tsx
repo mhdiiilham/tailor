@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
+import { Scissors } from "@phosphor-icons/react/dist/ssr";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Tailor",
@@ -24,11 +25,14 @@ const nav = [
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
       <body className="min-h-[100dvh] font-sans">
-        <header className="border-b border-line">
-          <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 md:px-8">
-            <Link href="/" className="text-[15px] font-semibold tracking-tight">
+        <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
+            <Link href="/" className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
+              <span className="grid size-8 place-items-center rounded-ui bg-accent text-on-accent">
+                <Scissors size={17} weight="bold" />
+              </span>
               Tailor
             </Link>
             {user ? (
@@ -49,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             ) : null}
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-4 py-10 md:px-8 md:py-14">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-12">{children}</main>
       </body>
     </html>
   );

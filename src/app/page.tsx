@@ -3,7 +3,8 @@ import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { Landing } from "./landing";
-import { EmptyState, PageHeader, ButtonLink } from "@/components/ui";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "@/components/ui";
+import { LOW_FIT_THRESHOLD } from "@/domain/fit";
 
 export const dynamic = "force-dynamic";
 
@@ -42,20 +43,30 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             : "Start by adding your profile. Every resume is built only from what's in it."}
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-line border-y border-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-raised">
           {apps.map((app) => (
             <li key={app.id}>
               <Link
                 href={`/applications/${app.id}`}
-                className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 py-4 transition-colors hover:bg-raised md:grid-cols-[1fr_auto_auto_auto] md:px-3"
+                className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 px-4 py-4 transition-colors hover:bg-sunken md:grid-cols-[1fr_auto_auto_auto] md:px-6"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{app.role}</span>
                   <span className="block truncate text-sm text-muted">{app.company}</span>
                 </span>
-                <span className="font-mono text-lg tabular-nums">{app.fit.score}</span>
-                <span className="hidden text-sm text-muted md:block">
-                  {app.status === "generated" ? "Resume ready" : "Waiting for answers"}
+                <span
+                  className={`font-mono text-lg font-semibold tabular-nums ${
+                    app.fit.score < LOW_FIT_THRESHOLD ? "text-danger" : "text-accent"
+                  }`}
+                >
+                  {app.fit.score}
+                </span>
+                <span className="hidden md:block">
+                  {app.status === "generated" ? (
+                    <Badge tone="good">Resume ready</Badge>
+                  ) : (
+                    <Badge tone="warn">Waiting for answers</Badge>
+                  )}
                 </span>
                 <span className="hidden font-mono text-sm text-faint md:block">{dateFormat.format(app.createdAt)}</span>
               </Link>

@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 
 const control =
-  "w-full rounded-ui border border-line bg-raised px-3 py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft";
+  "w-full rounded-ui border border-line bg-sunken px-3 py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft";
 
 // Label above, hint below, as one block.
 export function Field({

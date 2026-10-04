@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { testGeminiKey, type ActionState } from "@/app/actions";
 import { GEMINI_KEY_GUIDE, setGeminiKey, useGeminiKey } from "@/components/geminiKey";
-import { Button, Field, FormMessage, SectionHeader, TextInput } from "@/components/ui";
+import { Button, Card, Field, FormMessage, SectionHeader, TextInput } from "@/components/ui";
 
 export function GeminiKeySettings() {
   const saved = useGeminiKey();
@@ -26,7 +26,7 @@ export function GeminiKeySettings() {
   }
 
   return (
-    <section className="grid gap-6">
+    <Card>
       <SectionHeader
         title="Gemini API key"
         description={
@@ -95,6 +95,6 @@ export function GeminiKeySettings() {
           . On the free tier, Google may use what you send to improve its products.
         </p>
       </div>
-    </section>
+    </Card>
   );
 }

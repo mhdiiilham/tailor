@@ -1,37 +1,51 @@
 @import "tailwindcss";
 
-/* One palette: zinc neutrals, one cobalt accent (same as the resume PDF). */
+/* Navy workspace palette (from the Stitch redesign). Blue is the one accent;
+   green / amber / red are reserved for match status. Light mode mirrors it. */
 :root {
-  --surface: #fafafa;
+  --surface: #f6f8fb;
   --surface-raised: #ffffff;
-  --line: #e4e4e7;
-  --ink: #18181b;
-  --muted: #52525b;
-  --faint: #71717a;
-  --accent: #26428b;
-  --accent-soft: #e8edf8;
-  --on-accent: #fafafa;
-  --danger: #9f1d2b;
+  --surface-sunken: #eef2f7;
+  --line: #dfe5ee;
+  --ink: #0f172a;
+  --muted: #475569;
+  --faint: #64748b;
+  --accent: #2563eb;
+  --accent-soft: #e6eefe;
+  --on-accent: #ffffff;
+  --good: #047857;
+  --good-soft: #e3f5ee;
+  --warn: #b45309;
+  --warn-soft: #fdf1e1;
+  --danger: #c2272d;
+  --danger-soft: #fdeaea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #0f0f11;
-    --surface-raised: #18181b;
-    --line: #2e2e33;
-    --ink: #f4f4f5;
-    --muted: #b4b4bb;
-    --faint: #8e8e96;
-    --accent: #93acf0;
-    --accent-soft: #1b2440;
-    --on-accent: #0f0f11;
-    --danger: #f2a1a9;
+    --surface: #0b0f17;
+    --surface-raised: #111827;
+    --surface-sunken: #0f1522;
+    --line: #1e293b;
+    --ink: #f1f5f9;
+    --muted: #a3b0c2;
+    --faint: #7d8ba1;
+    --accent: #3b82f6;
+    --accent-soft: #14203a;
+    --on-accent: #ffffff;
+    --good: #34d399;
+    --good-soft: #0f2a24;
+    --warn: #fbbf24;
+    --warn-soft: #2b2212;
+    --danger: #f87171;
+    --danger-soft: #2c1517;
   }
 }
 
 @theme inline {
   --color-surface: var(--surface);
   --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
@@ -39,10 +53,18 @@
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  /* Controls 8px, chips 6px, panels 16px. */
   --radius-ui: 8px;
+  --radius-chip: 6px;
+  --radius-card: 16px;
 }
 
 body {

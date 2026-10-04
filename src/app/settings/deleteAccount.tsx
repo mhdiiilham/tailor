@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccount } from "@/app/actions";
 import { setGeminiKey } from "@/components/geminiKey";
-import { Button, FormMessage, SectionHeader } from "@/components/ui";
+import { Button, Card, FormMessage, SectionHeader } from "@/components/ui";
 
 export function DeleteAccount() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export function DeleteAccount() {
   }
 
   return (
-    <section className="grid gap-4 border-t border-line pt-8">
+    <Card className="border-danger/30">
       <SectionHeader
         title="Delete account"
         description="Removes your sign-in, your profile and all your applications from the server. You can sign in again later and start fresh."
@@ -33,6 +33,6 @@ export function DeleteAccount() {
         {pending ? "Deleting..." : "Delete my account"}
       </Button>
       <FormMessage error={error} />
-    </section>
+    </Card>
   );
 }

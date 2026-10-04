@@ -1,4 +1,5 @@
 export { Button, ButtonAnchor, ButtonLink, buttonClass, type ButtonVariant } from "./button";
+export { Badge, type BadgeTone } from "./badge";
 export { Card } from "./card";
 export { EmptyState } from "./emptyState";
 export { Field, TextArea, TextInput } from "./field";
