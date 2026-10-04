@@ -1,31 +1,58 @@
 import Link from "next/link";
+import { cache, Suspense } from "react";
 import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { ApplicationsTable } from "./dashboard/applicationsTable";
 import { summarize, toRow } from "./dashboard/rows";
+import { ApplicationsTableSkeleton, StatusStripSkeleton } from "./dashboard/skeletons";
 import { StatusStrip } from "./dashboard/statusStrip";
 import { Landing } from "./landing";
 import { NewApplicationForm } from "./new/form";
 
 export const dynamic = "force-dynamic";
 
-// Signed out: the public landing page. Signed in: your applications.
+// The strip and the table both need the list; cache() makes it one query per request.
+const loadRows = cache(async (userId: string) => (await applicationRepository().list(userId)).map(toRow));
+
+async function Strip({ userId }: { userId: string }) {
+  return <StatusStrip {...summarize(await loadRows(userId))} />;
+}
+
+async function List({ userId, hasProfile }: { userId: string; hasProfile: boolean }) {
+  const rows = await loadRows(userId);
+  if (rows.length > 0) return <ApplicationsTable rows={rows} />;
+  return (
+    <EmptyState
+      title="Nothing here yet"
+      actions={
+        <Link href={hasProfile ? "/new" : "/profile"} className="inline-flex items-center gap-1.5 text-accent">
+          {hasProfile ? "Paste a job description" : "Set up your profile"}
+          <ArrowRight size={14} weight="bold" />
+        </Link>
+      }
+    >
+      {hasProfile
+        ? "Your applications will show up here with their fit score and resume."
+        : "Start by adding your profile. Every resume is built only from what's in it."}
+    </EmptyState>
+  );
+}
+
+// Signed out: the public landing page. Signed in: your applications. The header and
+// the quick-paste box render right away; the list streams in behind skeletons.
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const user = await getCurrentUser();
   if (!user) return <Landing error={(await searchParams).error as string | undefined} />;
 
-  const [apps, profile] = await Promise.all([
-    applicationRepository().list(user.id),
-    profileRepository().findByUser(user.id),
-  ]);
-  const rows = apps.map(toRow);
-  const summary = summarize(rows);
+  const profile = await profileRepository().findByUser(user.id);
 
   return (
     <div className="grid gap-8">
-      <StatusStrip {...summary} />
+      <Suspense fallback={<StatusStripSkeleton />}>
+        <Strip userId={user.id} />
+      </Suspense>
 
       <PageHeader
         title="Applications"
@@ -54,23 +81,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </Card>
       ) : null}
 
-      {rows.length === 0 ? (
-        <EmptyState
-          title="Nothing here yet"
-          actions={
-            <Link href={profile ? "/new" : "/profile"} className="inline-flex items-center gap-1.5 text-accent">
-              {profile ? "Paste a job description" : "Set up your profile"}
-              <ArrowRight size={14} weight="bold" />
-            </Link>
-          }
-        >
-          {profile
-            ? "Your applications will show up here with their fit score and resume."
-            : "Start by adding your profile. Every resume is built only from what's in it."}
-        </EmptyState>
-      ) : (
-        <ApplicationsTable rows={rows} />
-      )}
+      <Suspense fallback={<ApplicationsTableSkeleton />}>
+        <List userId={user.id} hasProfile={Boolean(profile)} />
+      </Suspense>
     </div>
   );
 }
