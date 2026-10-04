@@ -93,6 +93,9 @@ class RecordingRenderer implements ResumeRenderer {
     this.rendered.push(resume);
     return { typSource: "= cv", pdf: Buffer.from("%PDF") };
   }
+  async previewPages() {
+    return [Buffer.from("png")];
+  }
   async compile() {
     return Buffer.from("%PDF");
   }

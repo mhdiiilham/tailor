@@ -31,4 +31,25 @@ describe.skipIf(!hasTypst)("TypstResumeRenderer", () => {
     expect(out.pdf.subarray(0, 4).toString()).toBe("%PDF");
     expect(out.typSource).toContain('#let name = "Ada Lovelace"');
   });
+
+  it("renders each page as a PNG for the preview", async () => {
+    const profile = ProfileSchema.parse({
+      personal: { name: "Ada Lovelace" },
+      experience: [{ title: "Engineer", company: "Co", start: "2021-08", end: "present" }],
+    });
+    const renderer = new TypstResumeRenderer();
+    const { typSource } = await renderer.render({
+      profile,
+      resume: {
+        summary: "Writes Go.",
+        work: [{ experienceIndex: 0, bullets: ["Shipped things."] }],
+        projects: [],
+        skills: [],
+        decisions: [],
+      },
+    });
+    const pages = await renderer.previewPages(typSource);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].subarray(1, 4).toString()).toBe("PNG");
+  });
 });

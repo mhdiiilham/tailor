@@ -46,4 +46,6 @@ export type RenderedResume = { typSource: string; pdf: Buffer };
 export interface ResumeRenderer {
   render(input: { profile: Profile; resume: TailoredResume }): Promise<RenderedResume>;
   compile(typSource: string): Promise<Buffer>;
+  // PNG images of each page, for showing the resume on screen.
+  previewPages(typSource: string): Promise<Buffer[]>;
 }

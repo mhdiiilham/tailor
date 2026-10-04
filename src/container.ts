@@ -17,8 +17,12 @@ export const accountRepository = () => new DrizzleAccountRepository(getDb());
 const renderer = () => new TypstResumeRenderer(process.env.TYPST_BIN ?? "typst");
 
 // Stored resumes: PDF downloads, deletion and expiry. Needs no Gemini key.
+// One preview cache per server process (kept on globalThis across dev reloads).
+const g = globalThis as unknown as { __previewCache?: Map<string, Buffer[]> };
+const previewCache = (g.__previewCache ??= new Map());
+
 export const applicationRecords = () =>
-  new ApplicationRecords({ applications: applicationRepository(), renderer: renderer() });
+  new ApplicationRecords({ applications: applicationRepository(), renderer: renderer(), previewCache });
 
 // The key comes from the browser with each request and lives only as long as it.
 export function geminiFor(geminiKey: string): GeminiLlm {

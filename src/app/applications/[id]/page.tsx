@@ -1,14 +1,15 @@
-import { createHash } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowSquareOut, CaretRight, DownloadSimple, Lightning, Sparkle } from "@phosphor-icons/react/dist/ssr";
-import { applicationRepository, profileRepository } from "@/container";
+import { CaretRight, DownloadSimple, Lightning, Sparkle } from "@phosphor-icons/react/dist/ssr";
+import { applicationRecords, applicationRepository, profileRepository } from "@/container";
 import { LOW_FIT_THRESHOLD, matchCounts, type FitAnalysis } from "@/domain/fit";
 import { resumeFileName } from "@/domain/slug";
 import { Badge, ButtonAnchor, Card, SectionHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { StageSelect } from "@/components/stageSelect";
+import { ScrollToResume } from "@/components/scrollToResume";
 import { DeleteApplication } from "./deleteApplication";
+import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
 import { RequirementsList } from "./requirementsList";
 import { ScoreCard } from "./scoreCard";
@@ -52,7 +53,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
   const label = matchLabel(fit.score);
   const generated = app.status === "generated";
   // Changes whenever the PDF is regenerated, so the preview never shows a stale copy.
-  const pdfVersion = app.typSource ? createHash("sha1").update(app.typSource).digest("hex").slice(0, 10) : "";
+  const preview = generated ? await applicationRecords().previewFor(user.id, app.id) : null;
   const fileName = resumeFileName(app.company, profile?.profile.personal.name ?? user.name, "pdf");
 
   return (
@@ -165,22 +166,17 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           </Card>
         </div>
 
-        <div id="resume" className="grid scroll-mt-24 gap-6 lg:sticky lg:top-24">
+        <div id="resume" className="grid scroll-mt-24 gap-6">
           {generated ? (
             <>
-              <Card>
-                <div className="flex items-center justify-between gap-3">
-                  <SectionHeader title="Tailored resume" />
-                  <ButtonAnchor variant="secondary" href={`/applications/${app.id}/pdf`} target="_blank">
-                    <ArrowSquareOut size={15} />
-                    Open
-                  </ButtonAnchor>
-                </div>
-                <iframe
-                  title={`Resume for ${app.company}`}
-                  src={`/applications/${app.id}/pdf?v=${pdfVersion}`}
-                  className="aspect-[8.5/11] w-full rounded-ui border border-line bg-white"
-                />
+              <Card id="resume-viewer" className="scroll-mt-24">
+                <SectionHeader title="Tailored resume" />
+                {preview ? (
+                  <>
+                    <ResumeViewer id={app.id} pages={preview.pages.length} version={preview.version} />
+                    <ScrollToResume key={preview.version} applicationId={app.id} targetId="resume-viewer" />
+                  </>
+                ) : null}
                 <p className="font-mono text-xs text-faint">{fileName}</p>
                 <p className="text-xs text-faint">
                   The stored PDF is deleted from the server 24 hours after it’s made. Downloading later rebuilds it.

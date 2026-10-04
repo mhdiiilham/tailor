@@ -30,10 +30,19 @@ function setup(stored: Application | null) {
     delete: async () => true,
     purgePdfsCreatedBefore: async (cutoff: Date) => (cutoffs.push(cutoff), 2),
   } as unknown as ApplicationRepository;
+  const previews: string[] = [];
   const renderer = {
     compile: async (src: string) => (compiled.push(src), Buffer.from("%PDF-rebuilt")),
+    previewPages: async (src: string) => (previews.push(src), [Buffer.from("png-1"), Buffer.from("png-2")]),
   } as unknown as ResumeRenderer;
-  return { records: new ApplicationRecords({ applications, renderer, now: () => now }), compiled, cutoffs, updates };
+  const previewCache = new Map<string, Buffer[]>();
+  return {
+    records: new ApplicationRecords({ applications, renderer, now: () => now, previewCache }),
+    compiled,
+    cutoffs,
+    updates,
+    previews,
+  };
 }
 
 describe("ApplicationRecords.pdfFor", () => {
@@ -84,5 +93,27 @@ describe("ApplicationRecords.setStage", () => {
   it("returns nothing for another user's application", async () => {
     const { records } = setup(app({}));
     expect(await records.setStage("bob", 1, "offer")).toBeNull();
+  });
+});
+
+describe("ApplicationRecords.previewFor", () => {
+  it("renders the pages once and serves repeats from the cache", async () => {
+    const { records, previews } = setup(app({}));
+    const first = await records.previewFor("alice", 1);
+    const second = await records.previewFor("alice", 1);
+    expect(first?.pages.map(String)).toEqual(["png-1", "png-2"]);
+    expect(second?.version).toBe(first?.version);
+    expect(previews).toEqual(["= cv"]);
+  });
+
+  it("has a new version when the resume changes", async () => {
+    const a = await setup(app({ typSource: "= one" })).records.previewFor("alice", 1);
+    const b = await setup(app({ typSource: "= two" })).records.previewFor("alice", 1);
+    expect(a?.version).not.toBe(b?.version);
+  });
+
+  it("returns nothing without a resume or for another user", async () => {
+    expect(await setup(app({ typSource: null })).records.previewFor("alice", 1)).toBeNull();
+    expect(await setup(app({})).records.previewFor("bob", 1)).toBeNull();
   });
 });
