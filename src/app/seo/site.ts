@@ -5,6 +5,9 @@ export const SITE_TITLE = "Tailor: Tailored Resumes for Every Job Description";
 export const SITE_DESCRIPTION =
   "Paste a job description, answer a few questions and get a one-page resume PDF built only from your profile. Free, on your own Gemini API key.";
 
+// Public repository. AGPL-3.0 asks a hosted copy to offer its source, so it's linked on every page.
+export const SOURCE_URL = "https://github.com/mhdiiilham/tailor";
+
 // The only pages a signed-out visitor (or a crawler) can see.
 export const PUBLIC_PAGES = ["/", "/privacy", "/terms"] as const;
 

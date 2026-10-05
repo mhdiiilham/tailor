@@ -6,7 +6,7 @@ import { NavLinks } from "@/components/navLinks";
 import { SUPPORT_URL, SupportButton } from "@/components/supportButton";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "./seo/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SOURCE_URL, siteUrl } from "./seo/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -109,6 +109,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               </Link>
               <a href="mailto:hi@muhammadilham.xyz" className="hover:text-ink">
                 Contact
+              </a>
+              <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink">
+                Source code
               </a>
               <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink">
                 Buy me a coffee

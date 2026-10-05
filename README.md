@@ -25,6 +25,7 @@ This README is for running your own copy.
 - [Running it](#running-it) (updates, backups, logs)
 - [Develop locally](#develop-locally)
 - [How it works](#how-it-works)
+- [License](#license)
 
 ---
 
@@ -228,3 +229,7 @@ src/prompts/         prompts for extraction, fit analysis, questions and the res
 src/components/ui/   Button, Card, Badge, EmptyState, Field, PageHeader, ...
 src/app/             pages, server actions, and the auth, health and PDF routes
 ```
+
+## License
+
+[AGPL-3.0](LICENSE). You can use, change and host Tailor. If you run a modified version for other people, the AGPL asks you to offer them its source code too. Point `SOURCE_URL` in `src/app/seo/site.ts` at your fork; it's linked in the footer of every page and on the landing page.

@@ -4,6 +4,7 @@ import {
   CheckCircle,
   CircleHalf,
   Clock,
+  GithubLogo,
   Key,
   LockSimple,
   ShieldCheck,
@@ -11,7 +12,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import { GoogleButton } from "@/components/googleButton";
-import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "./seo/site";
+import { SITE_DESCRIPTION, SITE_NAME, SOURCE_URL, siteUrl } from "./seo/site";
 
 const principles = [
   {
@@ -272,6 +273,30 @@ export function Landing({ error }: { error?: string }) {
               </article>
             );
           })}
+        </div>
+        <div className="-mt-6 flex flex-wrap items-center justify-between gap-5 rounded-card border border-line bg-raised p-6">
+          <div className="flex items-start gap-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-ui bg-accent-soft text-accent">
+              <GithubLogo size={18} />
+            </span>
+            <div className="grid gap-1">
+              <h3 className="font-medium">Fully open source</h3>
+              <p className="max-w-[68ch] text-sm leading-relaxed text-muted">
+                Don’t just take this page’s word for it. Every line is public on GitHub under the AGPL-3.0 license,
+                including how your key is handled. Read the code, open an issue, or run your own copy.
+              </p>
+            </div>
+          </div>
+          <a
+            href={SOURCE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 items-center gap-2 rounded-ui border border-line px-4 text-sm font-medium transition-colors hover:bg-sunken"
+          >
+            <GithubLogo size={16} />
+            View the code on GitHub
+            <ArrowSquareOut size={14} />
+          </a>
         </div>
       </section>
 
