@@ -15,9 +15,9 @@ export type ApplicationRow = {
   createdAt: string;
 };
 
-export type RowPage = { rows: ApplicationRow[]; nextCursor: number | null };
+export type RowPage = { rows: ApplicationRow[]; nextCursor: string | null };
 
-export const PAGE_SIZE = 20;
+export const PAGE_SIZE = 10;
 
 export function toRow(app: ApplicationSummary): ApplicationRow {
   return {

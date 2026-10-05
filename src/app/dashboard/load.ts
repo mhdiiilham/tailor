@@ -8,7 +8,7 @@ export async function loadRowPage(
   userId: string,
   stage: StageFilter,
   search: string,
-  cursor?: number,
+  cursor?: string,
 ): Promise<RowPage> {
   const page = await applicationRepository().listPage(userId, { stage, search, cursor, limit: PAGE_SIZE });
   return { rows: page.items.map(toRow), nextCursor: page.nextCursor };

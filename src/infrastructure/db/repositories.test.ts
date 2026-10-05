@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { NewApplication } from "@/domain/application";
 import { ProfileSchema } from "@/domain/profile";
+import type { Stage } from "@/domain/stage";
 import type { Db } from "./client";
 import { DrizzleAccountRepository, DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
 import { applications, user } from "./schema";
@@ -119,7 +120,7 @@ describe("listPage", () => {
 
     const one = await repo.listPage("alice", { ...firstPage, limit: 2 });
     expect(one.items.map((a) => a.id)).toEqual([ids[4], ids[3]]);
-    expect(one.nextCursor).toBe(ids[3]);
+    expect(one.nextCursor).toEqual(expect.any(String));
 
     const two = await repo.listPage("alice", { ...firstPage, limit: 2, cursor: one.nextCursor! });
     expect(two.items.map((a) => a.id)).toEqual([ids[2], ids[1]]);
@@ -127,6 +128,54 @@ describe("listPage", () => {
     const last = await repo.listPage("alice", { ...firstPage, limit: 2, cursor: two.nextCursor! });
     expect(last.items.map((a) => a.id)).toEqual([ids[0]]);
     expect(last.nextCursor).toBeNull();
+  });
+
+  it("orders offers, then interviews, then the rest, then rejected, then withdrawn", async () => {
+    const day = (d: number) => new Date(`2026-10-0${d}T00:00:00Z`);
+    const repo = new DrizzleApplicationRepository(db);
+    const make = async (role: string, stage: Stage, appliedAt: Date | null, stageUpdatedAt: Date | null) =>
+      (await repo.create({ ...newApp("alice"), role, stage, appliedAt, stageUpdatedAt })).id;
+    const early = await make("applied Oct 1", "applied", day(1), day(1));
+    const notYet = await make("not applied", "not_applied", null, null);
+    const rejectedRecent = await make("rejected, applied Oct 7", "rejected", day(7), day(8));
+    const interviewOld = await make("interviewing, applied Oct 2", "interviewing", day(2), day(6));
+    const late = await make("applied Oct 5", "applied", day(5), day(5));
+    const offer = await make("offer, applied Oct 1", "offer", day(1), day(9));
+    const sameDayRecent = await make("applied Oct 3, follow-up Oct 6", "applied", day(3), day(6));
+    const withdrawn = await make("withdrawn, applied Oct 8", "withdrawn", day(8), day(8));
+    const sameDayOlder = await make("applied Oct 3, unchanged", "applied", day(3), day(3));
+    const interviewNew = await make("interviewing, applied Oct 4", "interviewing", day(4), day(5));
+    const rejectedOld = await make("rejected, applied Oct 2", "rejected", day(2), day(4));
+
+    const order = [
+      offer,
+      interviewNew,
+      interviewOld,
+      late,
+      sameDayRecent,
+      sameDayOlder,
+      early,
+      notYet,
+      rejectedRecent,
+      rejectedOld,
+      withdrawn,
+    ];
+    expect((await repo.listPage("alice", firstPage)).items.map((a) => a.id)).toEqual(order);
+
+    // Paging one by one gives the same order, across groups and ties on the applied date.
+    const seen: number[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await repo.listPage("alice", { ...firstPage, limit: 1, cursor });
+      seen.push(...page.items.map((a) => a.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(seen).toEqual(order);
+  });
+
+  it("rejects a cursor it didn't issue", async () => {
+    const repo = new DrizzleApplicationRepository(db);
+    await expect(repo.listPage("alice", { ...firstPage, cursor: "not-a-cursor" })).rejects.toThrow(/page/);
   });
 
   it("returns only the summary fields the table needs", async () => {
@@ -156,8 +205,9 @@ describe("listPage", () => {
     const stages = ["applied", "rejected", "withdrawn", "offer"] as const;
     const { repo, ids } = await seed(4, (i) => ({ stage: stages[i] }));
 
+    // Rejected sorts before withdrawn.
     const closed = await repo.listPage("alice", { ...firstPage, stage: "closed" });
-    expect(closed.items.map((a) => a.id)).toEqual([ids[2], ids[1]]);
+    expect(closed.items.map((a) => a.id)).toEqual([ids[1], ids[2]]);
     expect((await repo.listPage("alice", { ...firstPage, stage: "offer" })).items.map((a) => a.id)).toEqual([ids[3]]);
   });
 

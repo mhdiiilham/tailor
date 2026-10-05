@@ -115,8 +115,9 @@ export async function loadApplications(input: {
   cursor: unknown;
 }): Promise<RowPage & ActionState> {
   const user = await requireUser();
-  const cursor = Number(input.cursor);
-  if (!Number.isInteger(cursor) || cursor < 1) return { rows: [], nextCursor: null, error: "Invalid page." };
+  // An opaque token from the previous page; the repository checks it.
+  const cursor = typeof input.cursor === "string" && input.cursor.length <= 500 ? input.cursor : null;
+  if (!cursor) return { rows: [], nextCursor: null, error: "Invalid page." };
   const search = typeof input.search === "string" ? input.search.slice(0, 200) : "";
   try {
     return await loadRowPage(user.id, parseStageFilter(input.stage), search, cursor);

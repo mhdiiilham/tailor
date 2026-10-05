@@ -51,10 +51,10 @@ export type ApplicationSummary = {
   createdAt: Date;
 };
 
-// Newest first. `cursor` is the id of the last row already shown; the page holds
-// the rows that come after it.
-export type ApplicationPageQuery = { stage: StageFilter; search: string; cursor?: number; limit: number };
-export type ApplicationPage = { items: ApplicationSummary[]; nextCursor: number | null };
+// Most recently applied first (not-yet-applied jobs last), then most recent stage change.
+// `cursor` is an opaque token for the last row already shown; the page holds the rows after it.
+export type ApplicationPageQuery = { stage: StageFilter; search: string; cursor?: string; limit: number };
+export type ApplicationPage = { items: ApplicationSummary[]; nextCursor: string | null };
 
 // Per-stage totals for the tabs and the status strip.
 // `scored` counts only analyzed applications, which are the ones with a fit score.

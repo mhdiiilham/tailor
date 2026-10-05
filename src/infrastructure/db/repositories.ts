@@ -1,4 +1,5 @@
 import { and, desc, eq, ilike, inArray, isNotNull, lt, or, sql, type SQL } from "drizzle-orm";
+import { z } from "zod";
 import type {
   Application,
   ApplicationPage,
@@ -9,7 +10,7 @@ import type {
 import { normalizeFit } from "@/domain/fit";
 import type { AccountRepository, ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
-import { stagesFor } from "@/domain/stage";
+import { stagesFor, type Stage } from "@/domain/stage";
 import type { Db } from "./client";
 import { applications, profiles, user } from "./schema";
 
@@ -28,6 +29,55 @@ export class DrizzleProfileRepository implements ProfileRepository {
       .values({ userId, data: profile, updatedAt })
       .onConflictDoUpdate({ target: profiles.userId, set: { data: profile, updatedAt } });
     return { profile, updatedAt };
+  }
+}
+
+// The list's order: offers first, then interviews, then everything else, then rejected,
+// with withdrawn last. Within each group, newest applied date, then latest stage change,
+// then id. Missing dates (not applied yet, stage never changed) sort as "-infinity",
+// so they come after the dated ones.
+const STAGE_RANK: Record<Stage, number> = {
+  offer: 4,
+  interviewing: 3,
+  applied: 2,
+  not_applied: 2,
+  rejected: 1,
+  withdrawn: 0,
+};
+// Built from the constant map above (no user input), so it's safe as raw SQL.
+const rankCases = Object.entries(STAGE_RANK)
+  .map(([stage, rank]) => `when '${stage}' then ${rank}`)
+  .join(" ");
+const rankSortKey = sql`case ${applications.stage} ${sql.raw(rankCases)} end`;
+const appliedSortKey = sql`coalesce(${applications.appliedAt}, '-infinity'::timestamptz)`;
+const stageSortKey = sql`coalesce(${applications.stageUpdatedAt}, '-infinity'::timestamptz)`;
+
+// The cursor carries the last row's sort keys, base64url-encoded so callers treat it as opaque.
+const CursorSchema = z.object({
+  r: z.number().int().min(0).max(4),
+  a: z.string().datetime().nullable(),
+  s: z.string().datetime().nullable(),
+  i: z.number().int().positive(),
+});
+type Cursor = z.infer<typeof CursorSchema>;
+
+type SortKeys = { stage: Stage; appliedAt: Date | null; stageUpdatedAt: Date | null; id: number };
+
+function encodeCursor(row: SortKeys): string {
+  const value: Cursor = {
+    r: STAGE_RANK[row.stage],
+    a: row.appliedAt?.toISOString() ?? null,
+    s: row.stageUpdatedAt?.toISOString() ?? null,
+    i: row.id,
+  };
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function decodeCursor(cursor: string): Cursor {
+  try {
+    return CursorSchema.parse(JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")));
+  } catch {
+    throw new Error("Invalid page. Reload the list and try again.");
   }
 }
 
@@ -62,13 +112,18 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
     return row ? toApplication(row) : null;
   }
 
-  // Cursor pagination on the id (newest first): stable while rows are added or
-  // deleted, and served by the primary key index. Selects only the table's columns.
+  // Keyset pagination on the sort keys above: stable while rows are added or deleted,
+  // with no skips or repeats on ties. Selects only the table's columns.
   async listPage(userId: string, { stage, search, cursor, limit }: ApplicationPageQuery): Promise<ApplicationPage> {
     const where: SQL[] = [eq(applications.userId, userId)];
     const stages = stagesFor(stage);
     if (stages) where.push(inArray(applications.stage, stages));
-    if (cursor) where.push(lt(applications.id, cursor));
+    if (cursor) {
+      const after = decodeCursor(cursor);
+      where.push(
+        sql`(${rankSortKey}, ${appliedSortKey}, ${stageSortKey}, ${applications.id}) < (${after.r}::int, coalesce(${after.a}::timestamptz, '-infinity'), coalesce(${after.s}::timestamptz, '-infinity'), ${after.i}::int)`,
+      );
+    }
     const query = search.trim();
     if (query) where.push(matchesSearch(query));
 
@@ -85,14 +140,18 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
         stage: applications.stage,
         appliedAt: applications.appliedAt,
         createdAt: applications.createdAt,
+        stageUpdatedAt: applications.stageUpdatedAt,
       })
       .from(applications)
       .where(and(...where))
-      .orderBy(desc(applications.id))
+      .orderBy(desc(rankSortKey), desc(appliedSortKey), desc(stageSortKey), desc(applications.id))
       .limit(limit + 1);
 
-    const items = rows.slice(0, limit);
-    return { items, nextCursor: rows.length > limit ? items[items.length - 1].id : null };
+    // stageUpdatedAt is only selected for the cursor; the rows carry just the table's fields.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const items = rows.slice(0, limit).map(({ stageUpdatedAt, ...item }) => item);
+    const last = rows[limit - 1];
+    return { items, nextCursor: rows.length > limit ? encodeCursor(last) : null };
   }
 
   async stageStats(userId: string): Promise<StageStats[]> {
