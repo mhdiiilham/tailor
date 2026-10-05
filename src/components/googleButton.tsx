@@ -1,9 +1,8 @@
 "use client";
 
-import { GoogleLogo } from "@phosphor-icons/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui";
 import { authClient } from "@/infrastructure/auth/authClient";
 
 // Sign-in is only possible after confirming age and accepting the terms.
@@ -31,17 +30,21 @@ export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
           .
         </span>
       </label>
-      <Button
-        className={fullWidth ? "w-full" : undefined}
+      {/* Google's own button artwork (Dark, pill), unmodified, per its branding guidelines. */}
+      <button
+        type="button"
+        aria-label="Sign in with Google"
+        aria-busy={pending}
         disabled={!agreed || pending}
         onClick={async () => {
           setPending(true);
           await authClient.signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/?error=access" });
         }}
+        className={`rounded-full transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "justify-self-center" : ""}`}
       >
-        <GoogleLogo size={18} weight="bold" />
-        {pending ? "Opening Google..." : "Continue with Google"}
-      </Button>
+        <Image src="/google-signin-dark.svg" alt="" width={198} height={44} priority />
+      </button>
+      {pending ? <p className={`text-xs text-faint ${fullWidth ? "text-center" : ""}`}>Opening Google...</p> : null}
     </div>
   );
 }
