@@ -60,4 +60,4 @@ jobs:
       - name: Trigger Coolify redeploy
         if: env.COOLIFY_WEBHOOK != ''
         run: |
-          curl --silent --show-error --fail --request POST --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" "${{ secrets.COOLIFY_WEBHOOK_URL }}"
+          curl --silent --show-error --fail --request POST --header "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
