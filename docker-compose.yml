@@ -19,7 +19,7 @@ services:
   app:
     build: .
     # Or skip the build and use a prebuilt image:
-    # image: ghcr.io/<github-user>/tailor:latest
+    # image: 668461485330.dkr.ecr.ap-southeast-3.amazonaws.com/tailor:latest
     restart: unless-stopped
     depends_on:
       db:

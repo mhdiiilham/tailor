@@ -95,7 +95,7 @@ Then open your domain, tick the 18+ box, and sign in with an allowed Google acco
 1. Add a **PostgreSQL** resource to your project and copy its internal connection URL.
 2. Add the app, either way:
    - **Build on the server:** New resource > your Git repository > build pack **Dockerfile**. Needs about 2 GB of RAM while building.
-   - **Use a prebuilt image:** New resource > **Docker Image** > `ghcr.io/<github-user>/tailor:latest`. See [Prebuilt images](#prebuilt-images-with-github-actions).
+   - **Use a prebuilt image (recommended):** New resource > **Docker Image** > `668461485330.dkr.ecr.ap-southeast-3.amazonaws.com/tailor:latest`. See [Prebuilt images](#prebuilt-images-with-github-actions).
 3. Port **3000**. The image's `HEALTHCHECK` (`/api/health`) is picked up automatically.
 4. Set the environment variables from step 2, with `DATABASE_URL` set to the Postgres URL from step 1.
 5. Set your domain, make sure the Google redirect URI matches it, and deploy.
@@ -106,11 +106,65 @@ Fly.io, Railway, Render, Kubernetes and similar all work: run the image, set the
 
 ### Prebuilt images with GitHub Actions
 
-`.github/workflows/tailor-image.yml` runs when you start it: **Actions > Tailor image > Run workflow** (pick the branch, usually `main`). It runs the CI checks, then builds and pushes `ghcr.io/<github-user>/tailor:latest` and a `sha-xxxxxxx` tag. Building there means a small server never has to build.
+`.github/workflows/tailor-image.yml` runs when you start it: **Actions > Tailor image > Run workflow** (pick the branch, usually `main`). It runs the CI checks, then builds and pushes `668461485330.dkr.ecr.ap-southeast-3.amazonaws.com/tailor:latest` and a `sha-xxxxxxx` tag to Amazon ECR. Building there means a small server never has to build. To use another registry, change `AWS_REGION` and `IMAGE` at the top of the workflow.
 
-- If the package is private, log your server in once: `echo <token> | docker login ghcr.io -u <github-user> --password-stdin`, using a token with `read:packages`.
-- Optional deploy to Coolify after each image build: add repository secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token).
-- The image is built for `linux/amd64`. For an ARM server, add `linux/arm64` to `platforms` in the workflow.
+**One-time AWS setup (lets GitHub push without stored AWS keys):**
+
+1. IAM > Identity providers > Add provider: OpenID Connect, URL `https://token.actions.githubusercontent.com`, audience `sts.amazonaws.com`.
+2. Create a role with this trust policy, so only this repository's `main` branch can use it:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Principal": { "Federated": "arn:aws:iam::668461485330:oidc-provider/token.actions.githubusercontent.com" },
+       "Action": "sts:AssumeRoleWithWebIdentity",
+       "Condition": {
+         "StringEquals": {
+           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+           "token.actions.githubusercontent.com:sub": "repo:mhdiiilham/tailor:ref:refs/heads/main"
+         }
+       }
+     }]
+   }
+   ```
+3. Give the role permission to push to the one repository:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       { "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*" },
+       {
+         "Effect": "Allow",
+         "Action": [
+           "ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:InitiateLayerUpload",
+           "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage"
+         ],
+         "Resource": "arn:aws:ecr:ap-southeast-3:668461485330:repository/tailor"
+       }
+     ]
+   }
+   ```
+4. Add the role's ARN as the repository secret `AWS_ROLE_ARN`.
+5. The workflow pushes `latest` every time, so the ECR repository's tag immutability must be **off** (Mutable).
+
+**Let the server pull from ECR.** An ECR login only lasts 12 hours, so a one-off `docker login` stops working. Use Amazon's credential helper on the server instead, which signs in on every pull:
+
+1. Create an IAM user with only `ecr:GetAuthorizationToken`, `ecr:BatchGetImage` and `ecr:GetDownloadUrlForLayer` (the last two on the `tailor` repository), and an access key for it.
+2. On the server, as the user Coolify runs Docker with (usually `root`):
+   ```sh
+   sudo apt-get install -y amazon-ecr-credential-helper
+   mkdir -p ~/.aws ~/.docker
+   printf '[default]\naws_access_key_id=<key id>\naws_secret_access_key=<secret>\nregion=ap-southeast-3\n' > ~/.aws/credentials
+   chmod 600 ~/.aws/credentials
+   echo '{ "credHelpers": { "668461485330.dkr.ecr.ap-southeast-3.amazonaws.com": "ecr-login" } }' > ~/.docker/config.json
+   docker pull 668461485330.dkr.ecr.ap-southeast-3.amazonaws.com/tailor:latest   # should work with no login
+   ```
+   If `~/.docker/config.json` already exists, add the `credHelpers` entry to it instead of overwriting it.
+
+**Optional:** deploy to Coolify after each image build by adding repository secrets `COOLIFY_WEBHOOK` (the resource's deploy webhook URL) and `COOLIFY_TOKEN` (a Coolify API token).
+
+The image is built for `linux/amd64`. For an ARM server, add `linux/arm64` to `platforms` in the workflow.
 
 ## 4. Make it yours (legal pages)
 
