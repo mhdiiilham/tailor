@@ -20,12 +20,25 @@ const newApp = (userId: string): NewApplication => ({
   role: "Engineer",
   jdText: "We need Go",
   job: {
-    company: "Acme", role: "Engineer", location: "", responsibilities: [], requirements: ["Go"],
-    niceToHaves: [], techStack: ["Go"], yearsRequired: 3, cultureSignals: [],
+    company: "Acme",
+    role: "Engineer",
+    location: "",
+    responsibilities: [],
+    requirements: ["Go"],
+    niceToHaves: [],
+    techStack: ["Go"],
+    yearsRequired: 3,
+    cultureSignals: [],
   },
   fit: {
-    score: 80, requirements: [], techStack: [], niceToHaves: [], experienceLevel: 80,
-    domainFit: 50, angles: [], blockers: [],
+    score: 80,
+    requirements: [],
+    techStack: [],
+    niceToHaves: [],
+    experienceLevel: 80,
+    domainFit: 50,
+    angles: [],
+    blockers: [],
   },
   questions: [{ id: "lead", question: "?" }],
   answers: null,
@@ -39,6 +52,8 @@ const newApp = (userId: string): NewApplication => ({
   stageUpdatedAt: null,
   appliedAt: null,
 });
+
+const firstPage = { stage: "all" as const, search: "", limit: 20 };
 
 beforeEach(async () => {
   db = await openTestDb();
@@ -82,9 +97,107 @@ describe("DrizzleApplicationRepository", () => {
     const alices = await repo.create(newApp("alice"));
 
     expect(await repo.findById("bob", alices.id)).toBeNull();
-    expect(await repo.list("bob")).toEqual([]);
+    expect((await repo.listPage("bob", firstPage)).items).toEqual([]);
+    expect(await repo.stageStats("bob")).toEqual([]);
     await expect(repo.update("bob", alices.id, { status: "generated" })).rejects.toThrow(/not found/);
     expect((await repo.findById("alice", alices.id))?.status).toBe("questions");
+  });
+});
+
+describe("listPage", () => {
+  // Creates n applications for alice, oldest first; returns their ids.
+  async function seed(n: number, over: (i: number) => Partial<NewApplication> = () => ({})) {
+    const repo = new DrizzleApplicationRepository(db);
+    const ids: number[] = [];
+    for (let i = 0; i < n; i++) ids.push((await repo.create({ ...newApp("alice"), ...over(i) })).id);
+    return { repo, ids };
+  }
+
+  it("pages newest first with a cursor until the end", async () => {
+    const { repo, ids } = await seed(5);
+
+    const one = await repo.listPage("alice", { ...firstPage, limit: 2 });
+    expect(one.items.map((a) => a.id)).toEqual([ids[4], ids[3]]);
+    expect(one.nextCursor).toBe(ids[3]);
+
+    const two = await repo.listPage("alice", { ...firstPage, limit: 2, cursor: one.nextCursor! });
+    expect(two.items.map((a) => a.id)).toEqual([ids[2], ids[1]]);
+
+    const last = await repo.listPage("alice", { ...firstPage, limit: 2, cursor: two.nextCursor! });
+    expect(last.items.map((a) => a.id)).toEqual([ids[0]]);
+    expect(last.nextCursor).toBeNull();
+  });
+
+  it("returns only the summary fields the table needs", async () => {
+    await seed(1, () => ({ pdf: Buffer.from("%PDF"), appliedAt: new Date("2026-10-01T00:00:00Z") }));
+    const [item] = (await new DrizzleApplicationRepository(db).listPage("alice", firstPage)).items;
+    expect(item).toEqual({
+      id: expect.any(Number),
+      role: "Engineer",
+      company: "Acme",
+      location: "",
+      techStack: ["Go"],
+      score: 80,
+      status: "questions",
+      stage: "not_applied",
+      appliedAt: new Date("2026-10-01T00:00:00Z"),
+      createdAt: expect.any(Date),
+    });
+  });
+
+  it("filters by stage, with closed covering rejected and withdrawn", async () => {
+    const stages = ["applied", "rejected", "withdrawn", "offer"] as const;
+    const { repo, ids } = await seed(4, (i) => ({ stage: stages[i] }));
+
+    const closed = await repo.listPage("alice", { ...firstPage, stage: "closed" });
+    expect(closed.items.map((a) => a.id)).toEqual([ids[2], ids[1]]);
+    expect((await repo.listPage("alice", { ...firstPage, stage: "offer" })).items.map((a) => a.id)).toEqual([ids[3]]);
+  });
+
+  it("searches role, company, location and stack, case-insensitively", async () => {
+    const { repo, ids } = await seed(
+      3,
+      (i) =>
+        [
+          { role: "Platform Engineer" },
+          { company: "UangAI" },
+          { job: { ...newApp("alice").job, location: "Remote, Jakarta", techStack: ["Kotlin", "Spring"] } },
+        ][i],
+    );
+    const find = async (search: string) =>
+      (await repo.listPage("alice", { ...firstPage, search })).items.map((a) => a.id);
+
+    expect(await find("platform")).toEqual([ids[0]]);
+    expect(await find("uangai")).toEqual([ids[1]]);
+    expect(await find("jakarta")).toEqual([ids[2]]);
+    expect(await find("kotlin")).toEqual([ids[2]]);
+  });
+
+  it("treats % and _ in a search as plain characters", async () => {
+    const { repo } = await seed(2, (i) => ({ role: i === 0 ? "100% remote" : "Engineer" }));
+    expect((await repo.listPage("alice", { ...firstPage, search: "%" })).items.map((a) => a.role)).toEqual([
+      "100% remote",
+    ]);
+    expect((await repo.listPage("alice", { ...firstPage, search: "_" })).items).toEqual([]);
+  });
+});
+
+describe("stageStats", () => {
+  it("counts each stage with its applied count and fit score total", async () => {
+    const repo = new DrizzleApplicationRepository(db);
+    const applied = new Date();
+    await repo.create({ ...newApp("alice"), stage: "applied", appliedAt: applied });
+    await repo.create({ ...newApp("alice"), stage: "applied", appliedAt: applied });
+    await repo.create({ ...newApp("alice"), stage: "rejected", appliedAt: applied });
+    await repo.create(newApp("alice"));
+    await repo.create(newApp("bob"));
+
+    const stats = await repo.stageStats("alice");
+    expect(stats.sort((a, b) => a.stage.localeCompare(b.stage))).toEqual([
+      { stage: "applied", count: 2, applied: 2, scoreSum: 160 },
+      { stage: "not_applied", count: 1, applied: 0, scoreSum: 80 },
+      { stage: "rejected", count: 1, applied: 1, scoreSum: 80 },
+    ]);
   });
 });
 
@@ -111,7 +224,7 @@ describe("deleting", () => {
     await new DrizzleAccountRepository(db).deleteUser("alice");
 
     expect(await profiles.findByUser("alice")).toBeNull();
-    expect(await apps.list("alice")).toEqual([]);
+    expect((await apps.listPage("alice", firstPage)).items).toEqual([]);
     expect(await profiles.findByUser("bob")).not.toBeNull();
     expect((await apps.findById("bob", bobs.id))?.id).toBe(bobs.id);
   });
@@ -121,8 +234,18 @@ describe("purgePdfsCreatedBefore", () => {
   it("drops old PDFs but keeps newer ones and the Typst source", async () => {
     const repo = new DrizzleApplicationRepository(db);
     const pdf = Buffer.from("%PDF");
-    const old = await repo.create({ ...newApp("alice"), pdf, typSource: "= old", pdfCreatedAt: new Date("2026-10-01T00:00:00Z") });
-    const fresh = await repo.create({ ...newApp("bob"), pdf, typSource: "= new", pdfCreatedAt: new Date("2026-10-04T00:00:00Z") });
+    const old = await repo.create({
+      ...newApp("alice"),
+      pdf,
+      typSource: "= old",
+      pdfCreatedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    const fresh = await repo.create({
+      ...newApp("bob"),
+      pdf,
+      typSource: "= new",
+      pdfCreatedAt: new Date("2026-10-04T00:00:00Z"),
+    });
 
     expect(await repo.purgePdfsCreatedBefore(new Date("2026-10-03T00:00:00Z"))).toBe(1);
 
@@ -135,7 +258,11 @@ describe("purgePdfsCreatedBefore", () => {
 
 describe("older saved analyses", () => {
   it("come back with structured angles and tags", async () => {
-    const legacyFit = { ...newApp("alice").fit, angles: ["Cut latency 90%"], requirements: [{ item: "Go", match: "HAVE", evidence: "PGL" }] };
+    const legacyFit = {
+      ...newApp("alice").fit,
+      angles: ["Cut latency 90%"],
+      requirements: [{ item: "Go", match: "HAVE", evidence: "PGL" }],
+    };
     const [row] = await db
       .insert(applications)
       .values({ ...newApp("alice"), fit: legacyFit as never })
@@ -154,7 +281,11 @@ describe("stage", () => {
     expect(app.stage).toBe("not_applied");
 
     const when = new Date("2026-10-05T09:00:00Z");
-    const updated = await repo.update("alice", app.id, { stage: "interviewing", stageUpdatedAt: when, appliedAt: when });
+    const updated = await repo.update("alice", app.id, {
+      stage: "interviewing",
+      stageUpdatedAt: when,
+      appliedAt: when,
+    });
     expect(updated).toMatchObject({ stage: "interviewing", appliedAt: when });
   });
 });

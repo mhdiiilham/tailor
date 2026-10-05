@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteApplication } from "@/app/actions";
 import { Button, FormMessage } from "@/components/ui";
 
 export function DeleteApplication({ id }: { id: number }) {
+  const router = useRouter();
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
 
@@ -21,7 +23,11 @@ export function DeleteApplication({ id }: { id: number }) {
             )
           )
             return;
-          startTransition(async () => setError((await deleteApplication(id))?.error));
+          startTransition(async () => {
+            const result = await deleteApplication(id);
+            if (result.error) setError(result.error);
+            else router.push("/");
+          });
         }}
       >
         {pending ? "Deleting..." : "Delete application"}

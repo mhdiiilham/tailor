@@ -2,14 +2,15 @@
 
 import { headers } from "next/headers";
 import { refresh } from "next/cache";
-import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 import { NoProfileError, NotFoundError } from "@/application/applications";
 import { accountRepository, applicationRecords, applicationServiceFor, profileRepository } from "@/container";
 import { getAuth } from "@/infrastructure/auth/auth";
 import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
-import { StageSchema } from "@/domain/stage";
+import { parseStageFilter, StageSchema } from "@/domain/stage";
+import { loadRowPage } from "./dashboard/load";
+import type { RowPage } from "./dashboard/rows";
 
 export type ActionState = { error?: string; notice?: string };
 
@@ -63,6 +64,7 @@ export async function saveResume(id: number, input: unknown): Promise<ActionStat
   return {};
 }
 
+// The caller decides what happens next: the list drops the row, the application page goes home.
 export async function deleteApplication(id: number): Promise<ActionState> {
   const user = await requireUser();
   try {
@@ -70,7 +72,24 @@ export async function deleteApplication(id: number): Promise<ActionState> {
   } catch (err) {
     return { error: describe(err) };
   }
-  redirect("/");
+  return {};
+}
+
+// "Load more" on the applications list. Every input comes from the browser, so it's checked here.
+export async function loadApplications(input: {
+  stage: unknown;
+  search: unknown;
+  cursor: unknown;
+}): Promise<RowPage & ActionState> {
+  const user = await requireUser();
+  const cursor = Number(input.cursor);
+  if (!Number.isInteger(cursor) || cursor < 1) return { rows: [], nextCursor: null, error: "Invalid page." };
+  const search = typeof input.search === "string" ? input.search.slice(0, 200) : "";
+  try {
+    return await loadRowPage(user.id, parseStageFilter(input.stage), search, cursor);
+  } catch (err) {
+    return { rows: [], nextCursor: null, error: describe(err) };
+  }
 }
 
 // Removes the account and, through cascades, the profile and every application.

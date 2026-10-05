@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { Application, NewApplication } from "./application";
+import type { Application, ApplicationPage, ApplicationPageQuery, NewApplication, StageStats } from "./application";
 import type { Profile } from "./profile";
 import type { TailoredResume } from "./resume";
 
@@ -29,7 +29,8 @@ export interface ProfileRepository {
 export interface ApplicationRepository {
   create(app: NewApplication): Promise<Application>;
   findById(userId: string, id: number): Promise<Application | null>;
-  list(userId: string): Promise<Application[]>;
+  listPage(userId: string, query: ApplicationPageQuery): Promise<ApplicationPage>;
+  stageStats(userId: string): Promise<StageStats[]>;
   update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application>;
   delete(userId: string, id: number): Promise<boolean>;
   // Drops stored PDFs made before the cutoff, for every user. Returns how many.

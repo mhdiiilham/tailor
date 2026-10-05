@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moveToStage, type StageFields } from "./stage";
+import { moveToStage, parseStageFilter, stagesFor, type StageFields } from "./stage";
 
 const now = new Date("2026-10-05T09:00:00Z");
 const fresh: StageFields = { stage: "not_applied", stageUpdatedAt: null, appliedAt: null };
@@ -21,5 +21,19 @@ describe("moveToStage", () => {
 
   it("changes nothing when the stage is the same", () => {
     expect(moveToStage(fresh, "not_applied", now)).toBe(fresh);
+  });
+});
+
+describe("stage filters", () => {
+  it("maps each filter to its stages", () => {
+    expect(stagesFor("all")).toBeNull();
+    expect(stagesFor("closed")).toEqual(["rejected", "withdrawn"]);
+    expect(stagesFor("applied")).toEqual(["applied"]);
+  });
+
+  it("falls back to all for anything unknown", () => {
+    expect(parseStageFilter("offer")).toBe("offer");
+    expect(parseStageFilter("rejected")).toBe("all");
+    expect(parseStageFilter(undefined)).toBe("all");
   });
 });

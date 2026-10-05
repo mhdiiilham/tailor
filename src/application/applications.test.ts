@@ -70,8 +70,11 @@ class MemoryApplications implements ApplicationRepository {
   async findById(userId: string, id: number) {
     return this.rows.find((r) => r.id === id && r.userId === userId) ?? null;
   }
-  async list(userId: string) {
-    return this.rows.filter((r) => r.userId === userId);
+  async listPage() {
+    return { items: [], nextCursor: null };
+  }
+  async stageStats() {
+    return [];
   }
   async delete() {
     return false;

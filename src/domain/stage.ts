@@ -17,6 +17,22 @@ export const STAGE_LABELS: Record<Stage, string> = {
 
 export const CLOSED_STAGES: Stage[] = ["rejected", "withdrawn"];
 
+// The list's filter tabs. Rejected and Withdrawn are grouped as "closed".
+export const STAGE_FILTERS = ["all", "not_applied", "applied", "interviewing", "offer", "closed"] as const;
+export type StageFilter = (typeof STAGE_FILTERS)[number];
+
+// The stages a filter covers; null means every stage.
+export function stagesFor(filter: StageFilter): Stage[] | null {
+  if (filter === "all") return null;
+  if (filter === "closed") return CLOSED_STAGES;
+  return [filter];
+}
+
+// Anything unknown (e.g. a hand-edited URL) falls back to "all".
+export function parseStageFilter(raw: unknown): StageFilter {
+  return STAGE_FILTERS.find((f) => f === raw) ?? "all";
+}
+
 export type StageFields = { stage: Stage; stageUpdatedAt: Date | null; appliedAt: Date | null };
 
 // The fields to store when an application moves to `next`. The applied date is

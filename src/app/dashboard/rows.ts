@@ -1,5 +1,5 @@
-import type { Application, ApplicationStatus } from "@/domain/application";
-import { CLOSED_STAGES, type Stage } from "@/domain/stage";
+import type { ApplicationStatus, ApplicationSummary, StageStats } from "@/domain/application";
+import { STAGE_FILTERS, stagesFor, type Stage, type StageFilter } from "@/domain/stage";
 
 // What the dashboard table needs, serializable for the client component.
 export type ApplicationRow = {
@@ -15,17 +15,18 @@ export type ApplicationRow = {
   createdAt: string;
 };
 
-// Rejected and Withdrawn are grouped as "closed" for filtering.
-export type StageFilter = "all" | "closed" | Exclude<Stage, "rejected" | "withdrawn">;
+export type RowPage = { rows: ApplicationRow[]; nextCursor: number | null };
 
-export function toRow(app: Application): ApplicationRow {
+export const PAGE_SIZE = 20;
+
+export function toRow(app: ApplicationSummary): ApplicationRow {
   return {
     id: app.id,
     role: app.role,
     company: app.company,
-    location: app.job.location,
-    stack: app.job.techStack.slice(0, 4),
-    score: app.fit.score,
+    location: app.location,
+    stack: app.techStack.slice(0, 4),
+    score: app.score,
     status: app.status,
     stage: app.stage,
     appliedAt: app.appliedAt?.toISOString() ?? null,
@@ -33,29 +34,19 @@ export function toRow(app: Application): ApplicationRow {
   };
 }
 
-export function matchesStage(row: ApplicationRow, filter: StageFilter): boolean {
-  if (filter === "all") return true;
-  if (filter === "closed") return CLOSED_STAGES.includes(row.stage);
-  return row.stage === filter;
-}
-
-// Case-insensitive search over role, company, location and stack.
-export function filterRows(rows: ApplicationRow[], query: string, filter: StageFilter): ApplicationRow[] {
-  const q = query.trim().toLowerCase();
-  return rows.filter((r) => {
-    if (!matchesStage(r, filter)) return false;
-    if (!q) return true;
-    return [r.role, r.company, r.location, ...r.stack].some((v) => v.toLowerCase().includes(q));
-  });
-}
-
-export function summarize(rows: ApplicationRow[]) {
-  const averageFit = rows.length ? Math.round(rows.reduce((sum, r) => sum + r.score, 0) / rows.length) : null;
+// Totals for the status strip and the filter tabs, from per-stage counts over
+// every application (not just the loaded page).
+export function summarize(stats: StageStats[]) {
+  const count = (stages: Stage[] | null) =>
+    stats.filter((s) => !stages || stages.includes(s.stage)).reduce((sum, s) => sum + s.count, 0);
+  const total = count(null);
+  const scoreSum = stats.reduce((sum, s) => sum + s.scoreSum, 0);
   return {
-    total: rows.length,
-    averageFit,
-    applied: rows.filter((r) => r.appliedAt !== null).length,
-    interviewing: rows.filter((r) => r.stage === "interviewing").length,
-    offers: rows.filter((r) => r.stage === "offer").length,
+    total,
+    averageFit: total ? Math.round(scoreSum / total) : null,
+    applied: stats.reduce((sum, s) => sum + s.applied, 0),
+    interviewing: count(["interviewing"]),
+    offers: count(["offer"]),
+    byFilter: Object.fromEntries(STAGE_FILTERS.map((f) => [f, count(stagesFor(f))])) as Record<StageFilter, number>,
   };
 }

@@ -1,8 +1,15 @@
-import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
-import type { Application, NewApplication } from "@/domain/application";
+import { and, desc, eq, ilike, inArray, isNotNull, lt, or, sql, type SQL } from "drizzle-orm";
+import type {
+  Application,
+  ApplicationPage,
+  ApplicationPageQuery,
+  NewApplication,
+  StageStats,
+} from "@/domain/application";
 import { normalizeFit } from "@/domain/fit";
 import type { AccountRepository, ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
+import { stagesFor } from "@/domain/stage";
 import type { Db } from "./client";
 import { applications, profiles, user } from "./schema";
 
@@ -24,6 +31,18 @@ export class DrizzleProfileRepository implements ProfileRepository {
   }
 }
 
+// Case-insensitive match on role, company, location or any stack item. LIKE's own
+// wildcards are escaped, so "%" or "_" in a search only match themselves.
+function matchesSearch(query: string): SQL {
+  const pattern = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  return or(
+    ilike(applications.role, pattern),
+    ilike(applications.company, pattern),
+    sql`${applications.job}->>'location' ilike ${pattern}`,
+    sql`(${applications.job}->'techStack')::text ilike ${pattern}`,
+  )!;
+}
+
 // Rows written before a schema change can hold older JSON shapes; upgrade on read.
 const toApplication = (row: Application): Application => ({ ...row, fit: normalizeFit(row.fit) });
 
@@ -43,13 +62,49 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
     return row ? toApplication(row) : null;
   }
 
-  async list(userId: string): Promise<Application[]> {
+  // Cursor pagination on the id (newest first): stable while rows are added or
+  // deleted, and served by the primary key index. Selects only the table's columns.
+  async listPage(userId: string, { stage, search, cursor, limit }: ApplicationPageQuery): Promise<ApplicationPage> {
+    const where: SQL[] = [eq(applications.userId, userId)];
+    const stages = stagesFor(stage);
+    if (stages) where.push(inArray(applications.stage, stages));
+    if (cursor) where.push(lt(applications.id, cursor));
+    const query = search.trim();
+    if (query) where.push(matchesSearch(query));
+
     const rows = await this.db
-      .select()
+      .select({
+        id: applications.id,
+        role: applications.role,
+        company: applications.company,
+        location: sql<string>`coalesce(${applications.job}->>'location', '')`,
+        techStack: sql<string[]>`coalesce(${applications.job}->'techStack', '[]'::jsonb)`,
+        score: sql<number>`coalesce(round((${applications.fit}->>'score')::numeric), 0)::int`,
+        status: applications.status,
+        stage: applications.stage,
+        appliedAt: applications.appliedAt,
+        createdAt: applications.createdAt,
+      })
+      .from(applications)
+      .where(and(...where))
+      .orderBy(desc(applications.id))
+      .limit(limit + 1);
+
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? items[items.length - 1].id : null };
+  }
+
+  async stageStats(userId: string): Promise<StageStats[]> {
+    return this.db
+      .select({
+        stage: applications.stage,
+        count: sql<number>`count(*)::int`,
+        applied: sql<number>`count(${applications.appliedAt})::int`,
+        scoreSum: sql<number>`coalesce(sum(round((${applications.fit}->>'score')::numeric)), 0)::int`,
+      })
       .from(applications)
       .where(eq(applications.userId, userId))
-      .orderBy(desc(applications.id));
-    return rows.map(toApplication);
+      .groupBy(applications.stage);
   }
 
   async update(userId: string, id: number, patch: Partial<Omit<NewApplication, "userId">>): Promise<Application> {

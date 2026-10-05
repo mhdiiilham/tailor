@@ -3,10 +3,12 @@ import Link from "next/link";
 import { cache, Suspense } from "react";
 import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
+import { parseStageFilter, type StageFilter } from "@/domain/stage";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { ApplicationsTable } from "./dashboard/applicationsTable";
-import { summarize, toRow } from "./dashboard/rows";
+import { loadRowPage } from "./dashboard/load";
+import { summarize } from "./dashboard/rows";
 import { ApplicationsTableSkeleton, StatusStripSkeleton } from "./dashboard/skeletons";
 import { StatusStrip } from "./dashboard/statusStrip";
 import { Landing } from "./landing";
@@ -18,16 +20,20 @@ export const dynamic = "force-dynamic";
 // "/?error=..." after a refused sign-in is the same page.
 export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: "/" });
 
-// The strip and the table both need the list; cache() makes it one query per request.
-const loadRows = cache(async (userId: string) => (await applicationRepository().list(userId)).map(toRow));
+// The strip and the tabs both need the per-stage counts; cache() makes it one query per request.
+const loadStats = cache(async (userId: string) => summarize(await applicationRepository().stageStats(userId)));
 
 async function Strip({ userId }: { userId: string }) {
-  return <StatusStrip {...summarize(await loadRows(userId))} />;
+  return <StatusStrip {...await loadStats(userId)} />;
 }
 
-async function List({ userId, hasProfile }: { userId: string; hasProfile: boolean }) {
-  const rows = await loadRows(userId);
-  if (rows.length > 0) return <ApplicationsTable rows={rows} />;
+type ListProps = { userId: string; hasProfile: boolean; stage: StageFilter; search: string };
+
+async function List({ userId, hasProfile, stage, search }: ListProps) {
+  const [stats, page] = await Promise.all([loadStats(userId), loadRowPage(userId, stage, search)]);
+  if (stats.total > 0) {
+    return <ApplicationsTable stage={stage} search={search} counts={stats.byFilter} page={page} />;
+  }
   return (
     <EmptyState
       title="Nothing here yet"
@@ -52,6 +58,10 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   if (!user) return <Landing error={(await searchParams).error as string | undefined} />;
 
   const profile = await profileRepository().findByUser(user.id);
+  // Filters live in the URL (?stage=applied&q=go), so the first page renders on the server.
+  const params = await searchParams;
+  const stage = parseStageFilter(params.stage);
+  const search = typeof params.q === "string" ? params.q.slice(0, 200) : "";
 
   return (
     <div className="grid gap-8">
@@ -87,7 +97,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       ) : null}
 
       <Suspense fallback={<ApplicationsTableSkeleton />}>
-        <List userId={user.id} hasProfile={Boolean(profile)} />
+        <List userId={user.id} hasProfile={Boolean(profile)} stage={stage} search={search} />
       </Suspense>
     </div>
   );
