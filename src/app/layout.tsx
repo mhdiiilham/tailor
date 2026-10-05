@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { NavLinks } from "@/components/navLinks";
+import { SUPPORT_URL, SupportButton } from "@/components/supportButton";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "./seo/site";
@@ -109,9 +110,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <a href="mailto:hi@muhammadilham.xyz" className="hover:text-ink">
                 Contact
               </a>
+              <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink">
+                Buy me a coffee
+              </a>
             </nav>
           </div>
         </footer>
+        <SupportButton />
       </body>
     </html>
   );
