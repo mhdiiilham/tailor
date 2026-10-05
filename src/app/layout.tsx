@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SOURCE_URL, siteUrl } from "./seo/site";
 import "./globals.css";
+import { Tagline } from '@dengankarya/dengankarya-ui'
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
@@ -100,6 +101,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-sm text-faint md:px-8">
             <span>Tailor. For people 18 and over.</span>
+            <Tagline
+              utm_source={'tailorCV'}
+              anchorProps={{
+                target: "_blank",
+                rel: "noopener noreferrer"
+              }}
+            />
             <nav className="flex flex-wrap gap-x-5 gap-y-1">
               <Link href="/privacy" className="hover:text-ink">
                 Privacy Policy
