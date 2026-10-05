@@ -1,13 +1,17 @@
 import Link from "next/link";
 import {
+  ArrowLeft,
+  ArrowRight,
   ArrowSquareOut,
   CheckCircle,
   CircleHalf,
   Clock,
   GithubLogo,
+  HardDrives,
   Key,
   LockSimple,
   ShieldCheck,
+  Sparkle,
   Trash,
   XCircle,
 } from "@phosphor-icons/react/dist/ssr";
@@ -16,10 +20,10 @@ import { SITE_DESCRIPTION, SITE_NAME, SOURCE_URL, siteUrl } from "./seo/site";
 
 const principles = [
   {
-    tag: "Key stays local",
-    title: "Your key stays in your browser",
-    body: "It’s sent along with each request, used once, then dropped. The server never saves or logs it.",
-    note: "Kept in your browser, never on the server",
+    tag: "Never on our server",
+    title: "Your key never touches our server",
+    body: "Your browser talks to Google directly. Tailor’s server never receives your Gemini key, so there’s nothing on our side to leak.",
+    note: "Your browser to Google, nothing in between",
     icon: Key,
   },
   {
@@ -71,13 +75,13 @@ const matches = [
 const security = [
   {
     icon: Key,
-    title: "Key never stored",
-    body: "Your Gemini key lives only in your browser, travels with each request over HTTPS, and is scrubbed from any error the server logs. On a shared computer, keep it for the tab only.",
+    title: "Key never reaches us",
+    body: "Your browser calls Google’s Gemini API directly over HTTPS. Tailor’s server only ever sees the results, never the key, so it can’t be logged or leaked from there. On a shared computer, keep it for the tab only.",
   },
   {
     icon: LockSimple,
     title: "Strict content policy",
-    body: "A per-request Content Security Policy only lets the app’s own scripts run next to your key.",
+    body: "A per-request Content Security Policy only lets the app’s own scripts run next to your key, and the page can only connect to Tailor and Google’s Gemini API.",
   },
   {
     icon: Clock,
@@ -90,6 +94,64 @@ const security = [
     body: "Remove one application or your whole account, profile and all, from Settings at any time.",
   },
 ];
+
+function FlowNode({
+  icon,
+  title,
+  detail,
+  tone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+  tone: string;
+}) {
+  return (
+    <div className="grid justify-items-center gap-2 text-center">
+      <span className={`grid size-11 place-items-center rounded-ui ${tone}`}>{icon}</span>
+      <p className="font-medium">{title}</p>
+      <p className="max-w-[24ch] text-xs leading-relaxed text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function FlowArrow({ label, direction, ok }: { label: string; direction: "left" | "right"; ok: boolean }) {
+  const Arrow = direction === "left" ? ArrowLeft : ArrowRight;
+  return (
+    <div className={`grid justify-items-center gap-1 text-xs ${ok ? "text-good" : "text-muted"}`}>
+      <Arrow size={22} className="rotate-90 md:rotate-0" />
+      <span className="max-w-[20ch] text-center font-medium">{label}</span>
+    </div>
+  );
+}
+
+// Where the Gemini key goes: from the browser to Google, and never to Tailor's server.
+function KeyFlow() {
+  return (
+    <div className="grid items-center gap-6 rounded-card border border-good/30 bg-raised p-6 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:gap-4">
+      <FlowNode
+        icon={<Sparkle size={20} weight="fill" />}
+        tone="bg-accent-soft text-accent"
+        title="Google Gemini"
+        detail="Uses your key to write. Billed to your own Google account."
+      />
+      <FlowArrow direction="left" ok label="Your key + the prompt, over HTTPS" />
+      <FlowNode
+        icon={<Key size={20} weight="fill" />}
+        tone="bg-good-soft text-good"
+        title="Your browser"
+        detail="The only place your key is kept."
+      />
+      <FlowArrow direction="right" ok={false} label="Only the results. Never the key." />
+      <FlowNode
+        icon={<HardDrives size={20} />}
+        tone="bg-sunken text-muted"
+        title="Tailor’s server"
+        detail="Saves your profile, applications and PDFs. Never receives your key."
+      />
+    </div>
+  );
+}
 
 // Describes what's on this page: a free web app. "<" is escaped so the JSON can't close the script tag.
 function StructuredData() {
@@ -152,8 +214,8 @@ export function Landing({ error }: { error?: string }) {
         <div className="grid gap-3">
           <h2 className="text-3xl font-semibold tracking-tight">Bring your own key</h2>
           <p className="max-w-[60ch] text-muted">
-            Tailor writes with your Gemini key and your profile. It doesn’t sit between you and Google, and it doesn’t
-            charge for it.
+            Tailor writes with your Gemini key and your profile. Your browser talks to Google directly, so Tailor never
+            sits between you and Google, and it doesn’t charge for it.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
@@ -260,7 +322,8 @@ export function Landing({ error }: { error?: string }) {
             Read the Privacy Policy
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KeyFlow />
+        <div className="-mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {security.map((s) => {
             const Icon = s.icon;
             return (

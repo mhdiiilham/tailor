@@ -6,7 +6,7 @@
 
 Paste a job description, answer a few questions, and download a one-page resume tailored to that job. Tailor also tracks where each application stands, from "Not applied" to "Offer".
 
-- **Bring your own key.** Each person adds their own Gemini API key in Settings. It stays in their browser and is sent with each AI request; the server never stores it.
+- **Bring your own key, and it never reaches the server.** Each person adds their own Gemini API key in Settings. It stays in their browser, which calls Google's Gemini API directly; the server only receives the results.
 - **Nothing invented.** The AI picks and rewrites from your profile only. Titles, companies and dates are copied from it, never generated.
 - **Open or private.** Google sign-in, open to anyone or limited to the emails you list.
 - **Small footprint.** One Next.js container, one Postgres database, Typst for the PDFs.
@@ -61,11 +61,9 @@ Copy `.env.example` to `.env` (Docker) or `.env.local` (local development) and f
 | `ALLOWED_EMAILS` | yes | Who may sign in. `*` lets anyone with a Google account in. Otherwise a comma-separated list of emails; everyone else is refused. Empty means nobody, so a missing value never opens the app by accident. Changes apply after a restart. |
 | `DATABASE_URL` | yes | Postgres connection string. Docker Compose sets it for you. |
 | `POSTGRES_PASSWORD` | Compose only | Password for the bundled Postgres in `docker-compose.yml`. |
-| `GEMINI_MODEL_FAST` | no | Model for reading the job post, fit analysis and questions. Default `gemini-flash-lite-latest`. |
-| `GEMINI_MODEL_WRITE` | no | Model that writes the resume. Default `gemini-flash-latest`. |
 | `TYPST_BIN` | no | Path to the Typst binary. Default `typst`; already in the Docker image. |
 
-No Gemini key goes here. Users add their own in the app.
+No Gemini key goes here. Users add their own in the app, and the server never receives it. The models (`gemini-flash-lite-latest` for analysis, `gemini-flash-latest` for writing) are set in `src/infrastructure/llm/geminiLlm.ts`.
 
 Never commit `.env` or put real values in `.env.example`.
 
@@ -183,7 +181,7 @@ Then build your own image. A prebuilt image from someone else carries their deta
 - **Updating:** pull and rebuild (`docker compose up -d --build`), or redeploy the new image. Migrations run on start.
 - **Backups:** back up Postgres, for example with `pg_dump` or your platform's scheduled backups. That's the only state. PDFs are stored in the database and deleted after 24 hours anyway.
 - **Health:** `GET /api/health` returns `{"status":"ok"}` when the database answers.
-- **Logs:** each Gemini call logs the model, input and output tokens, and duration (`[llm] ...`). The PDF cleanup logs `[retention] ...`. Gemini keys are scrubbed from error logs.
+- **Logs:** the PDF cleanup logs `[retention] ...`. Gemini calls happen in the browser, so they never appear in server logs (the browser console shows model, tokens and duration at the debug level).
 - **Users:** open sign-up with `ALLOWED_EMAILS=*`, or list emails and restart to add or remove people. People can delete their own account and all its data in Settings.
 - **Cost:** on Gemini's free tier, nothing. On a paid key a resume costs a few cents. Each user pays for their own key.
 
@@ -219,11 +217,13 @@ Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generat
 5. **Cover letter (optional).** Gemini drafts three or four paragraphs from the resume, your answers and your voice sample, a second pass rewrites it to remove AI-sounding patterns, and a final check catches leftover clichés. It's stored and shown as plain text to copy.
 6. **Track it.** Set the stage (Not applied, Applied, Interviewing, Offer, Rejected, Withdrawn); the applied date is recorded automatically.
 
+**Where it runs:** every Gemini call (steps 2 to 5) runs in the browser with the user's key, using the workflows in `src/application/workflows.ts`. Only the results go to the server, which validates them again (schemas, the fit score recomputed, roles checked against the stored profile), builds the Typst source itself and saves. The Content Security Policy only lets the page connect to the app and `generativelanguage.googleapis.com`.
+
 **What's stored:** per user, the profile, and per application the job description, answers, analysis, resume content, Typst source, cover letter (if generated) and stage. PDFs are deleted 24 hours after they're made and rebuilt from the Typst source if downloaded later. People can delete an application or their whole account at any time.
 
 ```
 src/domain/          entities, schemas, fit scoring, stages, retention, allowlist (no framework code)
-src/application/     use cases: ApplicationService (start, generate, revise), ApplicationRecords (PDFs, stages, deletion)
+src/application/     workflows (the AI steps, run in the browser), ApplicationService (validate and save), ApplicationRecords (PDFs, stages, deletion)
 src/infrastructure/  Postgres (Drizzle), Better Auth, Gemini adapter, Typst renderer
 src/prompts/         prompts for extraction, fit analysis, questions and the resume
 src/components/ui/   Button, Card, Badge, EmptyState, Field, PageHeader, ...

@@ -65,8 +65,9 @@ export default function PrivacyPage() {
       <LegalSection title="What Tailor does not store">
         <ul>
           <li>
-            <strong>Your Gemini API key.</strong> It stays in your browser. Each AI request sends it to Tailor’s server,
-            which uses it for that one request and never saves or logs it.
+            <strong>Your Gemini API key.</strong> It stays in your browser, and Tailor’s server never receives it. Your
+            browser sends it directly to Google’s Gemini API, and only the results (your job analysis, resume and cover
+            letter) are sent to Tailor to be saved.
           </li>
           <li>No analytics, no advertising, no tracking pixels, no data sold or shared for marketing.</li>
           <li>Tailor does not use your data to train AI models.</li>
@@ -90,8 +91,9 @@ export default function PrivacyPage() {
             applies to that step.
           </li>
           <li>
-            <strong>Google (Gemini API).</strong> To write your resume, Tailor sends your profile, the job description
-            and your answers to Google’s Gemini API using your own key. Google processes this under its{" "}
+            <strong>Google (Gemini API).</strong> To write your resume, your browser sends your profile, the job
+            description and your answers directly to Google’s Gemini API using your own key. Google processes this under
+            its{" "}
             <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">
               Gemini API terms
             </a>
@@ -174,8 +176,9 @@ export default function PrivacyPage() {
       <LegalSection title="Security">
         <p>
           Connections use HTTPS, sign-in goes through Google, every request checks that you only reach your own data,
-          and AI keys are never stored on the server. No system is perfectly secure; if a breach affects your data,
-          you’ll be told as the law requires.
+          and your Gemini key never reaches the server: your browser sends it only to Google, and the page is only
+          allowed to connect to Tailor and Google’s Gemini API. No system is perfectly secure; if a breach affects your
+          data, you’ll be told as the law requires.
         </p>
       </LegalSection>
 
