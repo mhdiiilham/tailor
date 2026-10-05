@@ -79,7 +79,8 @@ export function RequireGeminiKey({ children }: { children: ReactNode }) {
           </>
         }
       >
-        Resumes are written with your own Gemini key. It stays in this browser and goes only to Google. Tailor’s server never receives it.
+        Resumes are written with your own Gemini key. It stays in this browser and goes only to Google. Tailor’s server
+        never receives it.
       </EmptyState>
     );
   }
