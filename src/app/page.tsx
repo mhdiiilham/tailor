@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, Suspense } from "react";
-import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, BookmarkSimple, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
 import { parseStageFilter, type StageFilter } from "@/domain/stage";
 import { getCurrentUser } from "@/infrastructure/auth/session";
@@ -71,12 +71,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       <PageHeader
         title="Applications"
-        description="Every job you tailored a resume for, newest first."
+        description="Every job you tailored a resume for or are tracking, newest first."
         action={
-          <ButtonLink href={profile ? "/new" : "/profile"}>
-            <Plus size={16} weight="bold" />
-            New application
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink variant="secondary" href="/track">
+              <BookmarkSimple size={16} />
+              Track a job
+            </ButtonLink>
+            <ButtonLink href={profile ? "/new" : "/profile"}>
+              <Plus size={16} weight="bold" />
+              New application
+            </ButtonLink>
+          </div>
         }
       />
 

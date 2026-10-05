@@ -44,7 +44,7 @@ function matchesSearch(query: string): SQL {
 }
 
 // Rows written before a schema change can hold older JSON shapes; upgrade on read.
-const toApplication = (row: Application): Application => ({ ...row, fit: normalizeFit(row.fit) });
+const toApplication = (row: Application): Application => ({ ...row, fit: row.fit ? normalizeFit(row.fit) : null });
 
 export class DrizzleApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Db) {}
@@ -79,7 +79,8 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
         company: applications.company,
         location: sql<string>`coalesce(${applications.job}->>'location', '')`,
         techStack: sql<string[]>`coalesce(${applications.job}->'techStack', '[]'::jsonb)`,
-        score: sql<number>`coalesce(round((${applications.fit}->>'score')::numeric), 0)::int`,
+        // Null for a tracked job that hasn't been analyzed.
+        score: sql<number | null>`round((${applications.fit}->>'score')::numeric)::int`,
         status: applications.status,
         stage: applications.stage,
         appliedAt: applications.appliedAt,
@@ -100,6 +101,7 @@ export class DrizzleApplicationRepository implements ApplicationRepository {
         stage: applications.stage,
         count: sql<number>`count(*)::int`,
         applied: sql<number>`count(${applications.appliedAt})::int`,
+        scored: sql<number>`count(${applications.fit})::int`,
         scoreSum: sql<number>`coalesce(sum(round((${applications.fit}->>'score')::numeric)), 0)::int`,
       })
       .from(applications)

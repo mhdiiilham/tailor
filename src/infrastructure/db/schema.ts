@@ -86,7 +86,8 @@ export const applications = pgTable("applications", {
   role: text("role").notNull(),
   jdText: text("jd_text").notNull(),
   job: jsonb("job").$type<JobPosting>().notNull(),
-  fit: jsonb("fit").$type<FitAnalysis>().notNull(),
+  // Null for a job the person only tracks (no job description analyzed yet).
+  fit: jsonb("fit").$type<FitAnalysis>(),
   questions: jsonb("questions").$type<Question[]>().notNull(),
   answers: jsonb("answers").$type<Answers>(),
   resume: jsonb("resume").$type<TailoredResume>(),
@@ -95,7 +96,9 @@ export const applications = pgTable("applications", {
   // When the stored PDF was made; it's deleted after PDF_RETENTION_MS.
   pdfCreatedAt: ts("pdf_created_at"),
   coverLetter: text("cover_letter"),
-  status: text("status", { enum: ["questions", "generated"] }).notNull(),
+  jobUrl: text("job_url"),
+  notes: text("notes"),
+  status: text("status", { enum: ["tracked", "questions", "generated"] }).notNull(),
   stage: text("stage", { enum: STAGES }).notNull().default("not_applied"),
   stageUpdatedAt: ts("stage_updated_at"),
   appliedAt: ts("applied_at"),

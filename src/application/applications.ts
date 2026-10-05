@@ -5,6 +5,7 @@ import { JobPostingSchema } from "@/domain/job";
 import type { ApplicationRepository, ProfileRepository, ResumeRenderer, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
 import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, QuestionSchema, type Answers } from "@/domain/questions";
+import { StageSchema } from "@/domain/stage";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
 import { toPlainText } from "@/domain/writing";
 import { assembleQuestions, cleanResume } from "./workflows";
@@ -41,6 +42,35 @@ const SaveResumeInput = z.object({
 
 const CoverLetterInput = z.string().trim().min(1, "The cover letter is empty.").max(20_000);
 
+// Only http(s) links are kept, so a stored link can never run script when clicked.
+const JobUrl = z
+  .string()
+  .trim()
+  .max(2_000)
+  .refine((v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v), "That link doesn't look like a web address.")
+  .transform((v) => v || null);
+const Notes = z
+  .string()
+  .max(5_000)
+  .transform((v) => v.trim() || null);
+
+const TrackInput = z.object({
+  company: z.string().trim().min(1, "Add the company.").max(200),
+  role: z.string().trim().min(1, "Add the role.").max(200),
+  jobUrl: JobUrl.optional(),
+  location: z.string().trim().max(200).optional(),
+  stage: StageSchema.default("applied"),
+  // "YYYY-MM-DD" from a date input; today when left empty.
+  appliedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
+  notes: Notes.optional(),
+});
+
+const DetailsInput = z.object({ jobUrl: JobUrl, notes: Notes });
+
 export type ApplicationDeps = {
   userId: string;
   now?: () => Date;
@@ -73,6 +103,8 @@ export class ApplicationService {
       pdf: null,
       pdfCreatedAt: null,
       coverLetter: null,
+      jobUrl: null,
+      notes: null,
       status: "questions",
       stage: "not_applied",
       stageUpdatedAt: null,
@@ -80,10 +112,74 @@ export class ApplicationService {
     });
   }
 
+  // A job added by hand, only to keep track of it. Nothing is analyzed and no
+  // profile is needed; it can be analyzed later with analyzeTracked.
+  async track(input: unknown): Promise<Application> {
+    const t = TrackInput.parse(withinSize(input));
+    const now = this.now();
+    const applied = t.stage !== "not_applied";
+    return this.deps.applications.create({
+      userId: this.deps.userId,
+      company: t.company,
+      role: t.role,
+      jdText: "",
+      job: {
+        company: t.company,
+        role: t.role,
+        location: t.location ?? "",
+        responsibilities: [],
+        requirements: [],
+        niceToHaves: [],
+        techStack: [],
+        yearsRequired: null,
+        cultureSignals: [],
+      },
+      fit: null,
+      questions: [],
+      answers: null,
+      resume: null,
+      typSource: null,
+      pdf: null,
+      pdfCreatedAt: null,
+      coverLetter: null,
+      jobUrl: t.jobUrl ?? null,
+      notes: t.notes ?? null,
+      status: "tracked",
+      stage: t.stage,
+      stageUpdatedAt: now,
+      appliedAt: applied ? (t.appliedOn ? new Date(`${t.appliedOn}T00:00:00Z`) : now) : null,
+    });
+  }
+
+  // Pasting the job description into a tracked job: the browser's analysis is checked
+  // like a new one, and the job keeps its stage, dates, link, notes and the names typed in.
+  async analyzeTracked(id: number, input: unknown): Promise<Application> {
+    const { jdText, job, fit, questions } = NewApplicationInput.parse(withinSize(input));
+    const app = await this.requireApplication(id);
+    if (app.status !== "tracked") throw new Error("This job is already analyzed.");
+    await this.requireProfile();
+    const gaps = questions.filter((q) => q.id.startsWith("gap")).map((q) => q.question);
+    return this.deps.applications.update(this.deps.userId, id, {
+      jdText,
+      job: { ...job, location: job.location || app.job.location },
+      fit: { ...fit, score: fitScore(fit) },
+      questions: assembleQuestions(gaps),
+      status: "questions",
+    });
+  }
+
+  // The posting link and the person's notes, on any application.
+  async saveDetails(id: number, input: unknown): Promise<Application> {
+    const details = DetailsInput.parse(withinSize(input));
+    await this.requireApplication(id);
+    return this.deps.applications.update(this.deps.userId, id, details);
+  }
+
   // A new or revised resume. Revisions send no answers, so the earlier ones are kept.
   async saveResume(id: number, input: unknown): Promise<Application> {
     const parsed = SaveResumeInput.parse(withinSize(input));
     const app = await this.requireApplication(id);
+    if (!app.fit) throw new Error("Analyze the job description first.");
     const { profile } = await this.requireProfile();
     const answers = parsed.answers ? onlyAskedQuestions(app, parsed.answers) : undefined;
     // Cleaned again against the stored profile: the browser's copy isn't trusted.
@@ -105,7 +201,7 @@ export class ApplicationService {
     patch: { answers?: Answers },
   ): Promise<Application> {
     const { typSource, pdf } = await this.deps.renderer.render({ profile, resume });
-    const pdfCreatedAt = (this.deps.now ?? (() => new Date()))();
+    const pdfCreatedAt = this.now();
     return this.deps.applications.update(this.deps.userId, app.id, {
       ...patch,
       resume,
@@ -114,6 +210,10 @@ export class ApplicationService {
       pdfCreatedAt,
       status: "generated",
     });
+  }
+
+  private now(): Date {
+    return (this.deps.now ?? (() => new Date()))();
   }
 
   private async requireProfile(): Promise<StoredProfile> {

@@ -53,6 +53,39 @@ export async function createApplication(analysis: unknown): Promise<ActionState 
   }
 }
 
+// A job added by hand, only to track it. Returns the new id; the browser opens it.
+export async function trackApplication(input: unknown): Promise<ActionState & { id?: number }> {
+  const user = await requireUser();
+  try {
+    return { id: (await applicationServiceFor(user.id).track(input)).id };
+  } catch (err) {
+    return { error: describe(err) };
+  }
+}
+
+// The browser analyzed the job description pasted into a tracked job.
+export async function analyzeTrackedApplication(id: number, analysis: unknown): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await applicationServiceFor(user.id).analyzeTracked(id, analysis);
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  refresh();
+  return {};
+}
+
+export async function saveApplicationDetails(id: number, input: unknown): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await applicationServiceFor(user.id).saveDetails(id, input);
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  refresh();
+  return { notice: "Saved." };
+}
+
 export async function saveResume(id: number, input: unknown): Promise<ActionState> {
   const user = await requireUser();
   try {

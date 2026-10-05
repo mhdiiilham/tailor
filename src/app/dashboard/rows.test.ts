@@ -33,22 +33,23 @@ describe("toRow", () => {
 
 describe("summarize", () => {
   const stats: StageStats[] = [
-    { stage: "applied", count: 2, applied: 2, scoreSum: 160 },
-    { stage: "not_applied", count: 1, applied: 0, scoreSum: 70 },
-    { stage: "rejected", count: 1, applied: 1, scoreSum: 80 },
-    { stage: "withdrawn", count: 1, applied: 1, scoreSum: 60 },
-    { stage: "interviewing", count: 1, applied: 1, scoreSum: 90 },
+    { stage: "applied", count: 3, applied: 3, scored: 2, scoreSum: 160 },
+    { stage: "not_applied", count: 1, applied: 0, scored: 1, scoreSum: 70 },
+    { stage: "rejected", count: 1, applied: 1, scored: 1, scoreSum: 80 },
+    { stage: "withdrawn", count: 1, applied: 1, scored: 1, scoreSum: 60 },
+    { stage: "interviewing", count: 1, applied: 1, scored: 1, scoreSum: 90 },
   ];
 
-  it("counts applied, interviews and offers, and averages the fit", () => {
-    expect(summarize(stats)).toMatchObject({ total: 6, averageFit: 77, applied: 5, interviewing: 1, offers: 0 });
+  it("counts applied, interviews and offers, and averages the fit of analyzed jobs only", () => {
+    // 460 over the 6 scored jobs; the tracked one (in "applied") has no score.
+    expect(summarize(stats)).toMatchObject({ total: 7, averageFit: 77, applied: 6, interviewing: 1, offers: 0 });
   });
 
   it("counts each filter tab, grouping rejected and withdrawn as closed", () => {
     expect(summarize(stats).byFilter).toEqual({
-      all: 6,
+      all: 7,
       not_applied: 1,
-      applied: 2,
+      applied: 3,
       interviewing: 1,
       offer: 0,
       closed: 2,

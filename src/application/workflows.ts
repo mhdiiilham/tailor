@@ -20,7 +20,10 @@ import { BANNED_WORDS_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
 export type OnStep = (step: number) => void;
 
 // What the AI steps need from a saved application. Plain data, safe to pass to the browser.
-export type ApplicationContext = Pick<Application, "jdText" | "job" | "fit" | "questions" | "answers" | "resume">;
+// Only analyzed applications have a fit, and only they reach the resume steps.
+export type ApplicationContext = Pick<Application, "jdText" | "job" | "questions" | "answers" | "resume"> & {
+  fit: FitAnalysis;
+};
 
 export type JobAnalysis = { company: string; role: string; job: JobPosting; fit: FitAnalysis; questions: Question[] };
 

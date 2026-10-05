@@ -8,7 +8,7 @@ export type ApplicationRow = {
   company: string;
   location: string;
   stack: string[];
-  score: number;
+  score: number | null;
   status: ApplicationStatus;
   stage: Stage;
   appliedAt: string | null;
@@ -41,9 +41,10 @@ export function summarize(stats: StageStats[]) {
     stats.filter((s) => !stages || stages.includes(s.stage)).reduce((sum, s) => sum + s.count, 0);
   const total = count(null);
   const scoreSum = stats.reduce((sum, s) => sum + s.scoreSum, 0);
+  const scored = stats.reduce((sum, s) => sum + s.scored, 0);
   return {
     total,
-    averageFit: total ? Math.round(scoreSum / total) : null,
+    averageFit: scored ? Math.round(scoreSum / scored) : null,
     applied: stats.reduce((sum, s) => sum + s.applied, 0),
     interviewing: count(["interviewing"]),
     offers: count(["offer"]),

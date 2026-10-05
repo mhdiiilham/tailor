@@ -132,7 +132,7 @@ describe("ApplicationService.create", () => {
 
     expect(app).toMatchObject({ company: "Acme", role: "Backend Engineer", status: "questions", userId: "alice" });
     // 50*0.4 + 100*0.25 + 80*0.2 + 100*0.1 + 60*0.05 = 74, not the 99 the browser sent.
-    expect(app.fit.score).toBe(74);
+    expect(app.fit?.score).toBe(74);
   });
 
   it("keeps the fixed questions authoritative and only takes gap questions from the browser", async () => {
@@ -243,5 +243,118 @@ describe("ApplicationService.saveCoverLetter", () => {
     const { service } = setup();
     const app = await service.create(analysis);
     await expect(service.saveCoverLetter(app.id, "Hello")).rejects.toThrow(/resume/);
+  });
+});
+
+describe("ApplicationService.track", () => {
+  const job = {
+    company: "UangAI",
+    role: "Senior Fullstack Engineer",
+    jobUrl: "https://www.linkedin.com/jobs/view/123",
+    location: "Remote",
+    stage: "applied",
+    appliedOn: "2026-10-01",
+    notes: "Messaged Deveyana",
+  };
+
+  it("adds a job without any analysis", async () => {
+    const { service } = setup();
+
+    const app = await service.track(job);
+
+    expect(app).toMatchObject({
+      status: "tracked",
+      company: "UangAI",
+      role: "Senior Fullstack Engineer",
+      jobUrl: "https://www.linkedin.com/jobs/view/123",
+      notes: "Messaged Deveyana",
+      fit: null,
+      stage: "applied",
+      appliedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(app.job.location).toBe("Remote");
+  });
+
+  it("defaults to applied today, and leaves the date empty when not applied yet", async () => {
+    const { service } = setup();
+    const today = await service.track({ company: "Acme", role: "Engineer" });
+    expect(today).toMatchObject({ stage: "applied", appliedAt: new Date("2026-10-04T12:00:00Z") });
+
+    const later = await service.track({
+      company: "Acme",
+      role: "Engineer",
+      stage: "not_applied",
+      appliedOn: "2026-10-01",
+    });
+    expect(later.appliedAt).toBeNull();
+  });
+
+  it("needs a company and role, and only accepts web links", async () => {
+    const { service } = setup();
+    await expect(service.track({ company: " ", role: "Engineer" })).rejects.toThrow();
+    await expect(service.track({ ...job, jobUrl: "javascript:alert(1)" })).rejects.toThrow(/link/);
+  });
+
+  it("does not need a profile", async () => {
+    await expect(setup(null).service.track(job)).resolves.toMatchObject({ status: "tracked" });
+  });
+});
+
+describe("ApplicationService.analyzeTracked", () => {
+  it("turns a tracked job into an analyzed one, keeping its stage, dates, link and notes", async () => {
+    const { service } = setup();
+    const tracked = await service.track({
+      company: "UangAI",
+      role: "Senior Fullstack Engineer",
+      jobUrl: "https://example.com/job",
+      appliedOn: "2026-10-01",
+      notes: "Referral",
+    });
+
+    const app = await service.analyzeTracked(tracked.id, analysis);
+
+    expect(app).toMatchObject({
+      id: tracked.id,
+      status: "questions",
+      company: "UangAI",
+      role: "Senior Fullstack Engineer",
+      jobUrl: "https://example.com/job",
+      notes: "Referral",
+      stage: "applied",
+      appliedAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    expect(app.fit?.score).toBe(74);
+    expect(app.questions.map((q) => q.id)).toEqual(["lead", "tone", "gap1"]);
+  });
+
+  it("won't save a resume before the job is analyzed", async () => {
+    const { service } = setup();
+    const tracked = await service.track({ company: "Acme", role: "Engineer" });
+    await expect(service.saveResume(tracked.id, { resume })).rejects.toThrow(/Analyze/);
+  });
+
+  it("only applies to a tracked job", async () => {
+    const { service } = setup();
+    const analyzed = await service.create(analysis);
+    await expect(service.analyzeTracked(analyzed.id, analysis)).rejects.toThrow(/already/);
+  });
+});
+
+describe("ApplicationService.saveDetails", () => {
+  it("saves the link and notes, with blanks stored as empty", async () => {
+    const { service } = setup();
+    const app = await service.create(analysis);
+
+    const saved = await service.saveDetails(app.id, { jobUrl: " https://example.com/x ", notes: "Call on Friday" });
+    expect(saved).toMatchObject({ jobUrl: "https://example.com/x", notes: "Call on Friday" });
+
+    const cleared = await service.saveDetails(app.id, { jobUrl: "", notes: "  " });
+    expect(cleared).toMatchObject({ jobUrl: null, notes: null });
+  });
+
+  it("rejects a link that isn't a web address", async () => {
+    const { service } = setup();
+    const app = await service.create(analysis);
+    await expect(service.saveDetails(app.id, { jobUrl: "file:///etc/passwd", notes: "" })).rejects.toThrow(/link/);
   });
 });

@@ -4,7 +4,9 @@ import type { Answers, Question } from "./questions";
 import type { TailoredResume } from "./resume";
 import type { Stage, StageFilter } from "./stage";
 
-export type ApplicationStatus = "questions" | "generated";
+// "tracked": added by hand to keep track of it, nothing analyzed yet.
+// "questions": job analyzed, waiting for answers. "generated": resume written.
+export type ApplicationStatus = "tracked" | "questions" | "generated";
 
 export type Application = {
   id: number;
@@ -13,7 +15,7 @@ export type Application = {
   role: string;
   jdText: string;
   job: JobPosting;
-  fit: FitAnalysis;
+  fit: FitAnalysis | null;
   questions: Question[];
   answers: Answers | null;
   resume: TailoredResume | null;
@@ -22,6 +24,9 @@ export type Application = {
   pdfCreatedAt: Date | null;
   // Plain text, ready to paste. Null until the user asks for one.
   coverLetter: string | null;
+  // The posting's URL and the person's own notes. Optional, for any application.
+  jobUrl: string | null;
+  notes: string | null;
   status: ApplicationStatus;
   // Job-hunt progress, set by the user.
   stage: Stage;
@@ -39,7 +44,8 @@ export type ApplicationSummary = {
   company: string;
   location: string;
   techStack: string[];
-  score: number;
+  // Null for a tracked job that hasn't been analyzed.
+  score: number | null;
   status: ApplicationStatus;
   stage: Stage;
   appliedAt: Date | null;
@@ -52,4 +58,5 @@ export type ApplicationPageQuery = { stage: StageFilter; search: string; cursor?
 export type ApplicationPage = { items: ApplicationSummary[]; nextCursor: number | null };
 
 // Per-stage totals for the tabs and the status strip.
-export type StageStats = { stage: Stage; count: number; applied: number; scoreSum: number };
+// `scored` counts only analyzed applications, which are the ones with a fit score.
+export type StageStats = { stage: Stage; count: number; applied: number; scored: number; scoreSum: number };

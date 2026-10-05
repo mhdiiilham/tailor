@@ -47,6 +47,8 @@ const newApp = (userId: string): NewApplication => ({
   pdf: null,
   pdfCreatedAt: null,
   coverLetter: null,
+  jobUrl: null,
+  notes: null,
   status: "questions",
   stage: "not_applied",
   stageUpdatedAt: null,
@@ -145,6 +147,12 @@ describe("listPage", () => {
     });
   });
 
+  it("lists a tracked job with no fit score", async () => {
+    await seed(1, () => ({ status: "tracked", fit: null, jobUrl: "https://example.com/job", notes: "Referral" }));
+    const [item] = (await new DrizzleApplicationRepository(db).listPage("alice", firstPage)).items;
+    expect(item).toMatchObject({ status: "tracked", score: null });
+  });
+
   it("filters by stage, with closed covering rejected and withdrawn", async () => {
     const stages = ["applied", "rejected", "withdrawn", "offer"] as const;
     const { repo, ids } = await seed(4, (i) => ({ stage: stages[i] }));
@@ -190,13 +198,14 @@ describe("stageStats", () => {
     await repo.create({ ...newApp("alice"), stage: "applied", appliedAt: applied });
     await repo.create({ ...newApp("alice"), stage: "rejected", appliedAt: applied });
     await repo.create(newApp("alice"));
+    await repo.create({ ...newApp("alice"), status: "tracked", fit: null, stage: "applied", appliedAt: applied });
     await repo.create(newApp("bob"));
 
     const stats = await repo.stageStats("alice");
     expect(stats.sort((a, b) => a.stage.localeCompare(b.stage))).toEqual([
-      { stage: "applied", count: 2, applied: 2, scoreSum: 160 },
-      { stage: "not_applied", count: 1, applied: 0, scoreSum: 80 },
-      { stage: "rejected", count: 1, applied: 1, scoreSum: 80 },
+      { stage: "applied", count: 3, applied: 3, scored: 2, scoreSum: 160 },
+      { stage: "not_applied", count: 1, applied: 0, scored: 1, scoreSum: 80 },
+      { stage: "rejected", count: 1, applied: 1, scored: 1, scoreSum: 80 },
     ]);
   });
 });
@@ -269,8 +278,8 @@ describe("older saved analyses", () => {
       .returning({ id: applications.id });
 
     const app = await new DrizzleApplicationRepository(db).findById("alice", row.id);
-    expect(app?.fit.angles[0]).toEqual({ title: "", detail: "Cut latency 90%", source: "", jdQuote: "" });
-    expect(app?.fit.requirements[0].tag).toBe("");
+    expect(app?.fit?.angles[0]).toEqual({ title: "", detail: "Cut latency 90%", source: "", jdQuote: "" });
+    expect(app?.fit?.requirements[0].tag).toBe("");
   });
 });
 

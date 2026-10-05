@@ -1,15 +1,26 @@
 import { createHash } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaretRight, DownloadSimple, Lightning, Sparkle } from "@phosphor-icons/react/dist/ssr";
+import {
+  ArrowSquareOut,
+  CaretRight,
+  DownloadSimple,
+  Lightning,
+  MagnifyingGlass,
+  Sparkle,
+} from "@phosphor-icons/react/dist/ssr";
 import { applicationRecords, applicationRepository, profileRepository } from "@/container";
+import type { Application } from "@/domain/application";
 import { LOW_FIT_THRESHOLD, matchCounts, type FitAnalysis } from "@/domain/fit";
+import type { Profile } from "@/domain/profile";
 import { resumeFileName } from "@/domain/slug";
 import { Badge, ButtonAnchor, Card, SectionHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { StageSelect } from "@/components/stageSelect";
 import { ScrollToResult } from "@/components/scrollToResult";
+import { AnalyzeTrackedForm } from "./analyzeTracked";
 import { CoverLetterPanel } from "./coverLetter";
+import { DetailsCard } from "./details";
 import { DeleteApplication } from "./deleteApplication";
 import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
@@ -56,6 +67,75 @@ function NeedsProfile() {
   );
 }
 
+function Breadcrumb({ role }: { role: string }) {
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-faint">
+      <Link href="/" className="hover:text-ink">
+        Applications
+      </Link>
+      <CaretRight size={12} />
+      <span className="truncate text-muted">{role}</span>
+    </nav>
+  );
+}
+
+function JobLink({ url }: { url: string | null }) {
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
+    >
+      View the job posting
+      <ArrowSquareOut size={13} />
+    </a>
+  );
+}
+
+// A job added only to track it: its details, notes, and a way to analyze it later.
+function TrackedApplication({ app, profile }: { app: Application; profile: Profile | null }) {
+  return (
+    <div className="grid grid-cols-1 gap-8">
+      <Breadcrumb role={app.role} />
+      <header className="grid min-w-0 grid-cols-1 gap-4">
+        <div className="flex flex-wrap gap-2">
+          <Badge>Tracked</Badge>
+          {app.job.location ? (
+            <Badge tone="accent" truncate>
+              {app.job.location}
+            </Badge>
+          ) : null}
+        </div>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">{app.role}</h1>
+        <p className="text-muted">{app.company}</p>
+        <div className="flex flex-wrap items-center gap-3 text-sm text-faint">
+          <StageSelect id={app.id} stage={app.stage} />
+          {app.appliedAt ? <span>Applied {dateFormat.format(app.appliedAt)}</span> : null}
+          <JobLink url={app.jobUrl} />
+        </div>
+      </header>
+
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <DetailsCard id={app.id} jobUrl={app.jobUrl} notes={app.notes} />
+        <Card>
+          <SectionHeader
+            icon={<MagnifyingGlass size={18} />}
+            title="Analyze and tailor"
+            description="Paste the job description to score your fit and write a tailored resume. This job keeps its stage, dates and notes."
+          />
+          {profile ? <AnalyzeTrackedForm id={app.id} profile={profile} /> : <NeedsProfile />}
+        </Card>
+      </div>
+
+      <section className="border-t border-line pt-8">
+        <DeleteApplication id={app.id} />
+      </section>
+    </div>
+  );
+}
+
 export default async function ApplicationPage({ params }: PageProps<"/applications/[id]">) {
   const user = await requireUser();
   const { id } = await params;
@@ -64,6 +144,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
   const profile = await profileRepository().findByUser(user.id);
 
   const { fit, job } = app;
+  if (!fit) return <TrackedApplication app={app} profile={profile?.profile ?? null} />;
   const items = matchedItems(fit);
   const label = matchLabel(fit.score);
   const generated = app.status === "generated";
@@ -74,7 +155,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
   const context = {
     jdText: app.jdText,
     job: app.job,
-    fit: app.fit,
+    fit,
     questions: app.questions,
     answers: app.answers,
     resume: app.resume,
@@ -83,13 +164,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
 
   return (
     <div className="grid grid-cols-1 gap-8">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-faint">
-        <Link href="/" className="hover:text-ink">
-          Applications
-        </Link>
-        <CaretRight size={12} />
-        <span className="truncate text-muted">{app.role}</span>
-      </nav>
+      <Breadcrumb role={app.role} />
 
       <header className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center">
         <div className="grid min-w-0 grid-cols-1 gap-4">
@@ -117,6 +192,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             {app.stageUpdatedAt && app.stage !== "applied" && app.stage !== "not_applied" ? (
               <span>Updated {dateFormat.format(app.stageUpdatedAt)}</span>
             ) : null}
+            <JobLink url={app.jobUrl} />
           </div>
           {generated ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -267,6 +343,8 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           )}
         </div>
       </div>
+
+      <DetailsCard id={app.id} jobUrl={app.jobUrl} notes={app.notes} />
 
       <section id="job" className="scroll-mt-24">
         <Card>

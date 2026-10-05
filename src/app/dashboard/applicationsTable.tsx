@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartBar, DownloadSimple, MagnifyingGlass, PencilSimple, Trash } from "@phosphor-icons/react";
+import { ArrowRight, ChartBar, DownloadSimple, MagnifyingGlass, PencilSimple, Trash } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { deleteApplication, loadApplications } from "@/app/actions";
@@ -12,7 +12,14 @@ import type { ApplicationRow, RowPage } from "./rows";
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" });
 
-function Fit({ score }: { score: number }) {
+function Fit({ score }: { score: number | null }) {
+  if (score === null) {
+    return (
+      <span className="font-mono text-sm text-faint" title="Not analyzed: added only to track it">
+        —
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-baseline gap-1 rounded-ui border border-line bg-sunken px-2.5 py-1">
       <span
@@ -30,7 +37,12 @@ function Actions({ row, onDeleted }: { row: ApplicationRow; onDeleted: (id: numb
   const [pending, startTransition] = useTransition();
   return (
     <div className="flex items-center gap-1.5 lg:justify-end">
-      {row.status === "generated" ? (
+      {row.status === "tracked" ? (
+        <ButtonLink variant="secondary" size="sm" href={`/applications/${row.id}`}>
+          <ArrowRight size={14} />
+          Open
+        </ButtonLink>
+      ) : row.status === "generated" ? (
         <>
           <ButtonLink variant="secondary" size="sm" href={`/applications/${row.id}`}>
             <ChartBar size={14} />
@@ -236,6 +248,7 @@ function Row({ row, onDeleted }: { row: ApplicationRow; onDeleted: (id: number) 
             </span>
           ) : null}
           {row.status === "questions" ? <Badge tone="warn">Answer questions</Badge> : null}
+          {row.status === "tracked" ? <Badge>Tracked</Badge> : null}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="text-muted">{row.company}</span>
