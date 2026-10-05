@@ -14,7 +14,8 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { testGeminiKey, type ActionState } from "@/app/actions";
+import type { ActionState } from "@/app/actions";
+import { checkGeminiKey } from "@/components/checkGeminiKey";
 import { GEMINI_KEY_GUIDE, setGeminiKey, useGeminiKey, useKeyRemembered } from "@/components/geminiKey";
 import { Badge, Button, Card, Field, FormMessage, SecretInput, SectionHeader } from "@/components/ui";
 
@@ -26,9 +27,10 @@ function status(saved: string | null, remembered: boolean | null): string {
 }
 
 const TRUST_FACTS = [
-  "It stays in this browser. Tailor has no database field for it and never saves it on the server.",
-  "Each AI request sends it to the server over HTTPS, where it's used for that one call to Google and then dropped.",
-  "It's never written to logs. If an error mentions it, the key is removed before anything is logged or shown.",
+  "Tailor's server never receives it. Your browser sends it directly to Google's Gemini API over HTTPS.",
+  "Only the results go to Tailor: the job analysis, resume and cover letter. Never the key.",
+  "It's kept only in this browser. Tailor has no database field for it, so there's nothing on our side to leak.",
+  "The page is only allowed to connect to Tailor and Google, and if an error ever repeats the key, it's removed before it's shown.",
   "Signing out or pressing Remove deletes it from this browser.",
 ];
 
@@ -81,7 +83,7 @@ export function GeminiKeySettings() {
     const key = draft.trim();
     if (!key) return;
     startTransition(async () => {
-      const result = await testGeminiKey(key);
+      const result = await checkGeminiKey(key);
       if (!result.error) {
         setGeminiKey(key, remember);
         setDraft("");
@@ -100,7 +102,7 @@ export function GeminiKeySettings() {
     const key = draft.trim() || saved;
     if (!key) return;
     startTesting(async () => {
-      const result = await testGeminiKey(key);
+      const result = await checkGeminiKey(key);
       setVerified(!result.error);
       setState(result.error ? result : { notice: "Connection works." });
     });
@@ -142,7 +144,7 @@ export function GeminiKeySettings() {
               </span>
             }
             htmlFor="gemini-key"
-            hint="Checked with one tiny request to Google, then kept only in this browser."
+            hint="Checked with one tiny request from this browser to Google, then kept only here."
           >
             <SecretInput
               id="gemini-key"
@@ -194,8 +196,8 @@ export function GeminiKeySettings() {
       <Card>
         <SectionHeader
           icon={<ShieldCheck size={18} />}
-          title="What Tailor does with your key"
-          description="What the app does, and doesn't do, with it"
+          title="Your key never reaches Tailor's server"
+          description="Where your key goes, and where it never goes"
         />
         <ul className="grid gap-3 border-t border-line pt-5 text-sm leading-relaxed">
           {TRUST_FACTS.map((fact) => (

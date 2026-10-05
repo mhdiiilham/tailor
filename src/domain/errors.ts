@@ -22,7 +22,13 @@ export class RateLimitedError extends Error {
   }
 }
 
-// Removes a secret from any text before it can reach a log or the browser.
+export class GeminiUnreachableError extends Error {
+  constructor() {
+    super("Couldn't reach Google's Gemini API. Check your connection and try again.");
+  }
+}
+
+// Removes a secret from any text before it can be shown or logged.
 export function scrubSecret(text: string, secret: string | undefined): string {
   if (!secret || secret.length < 8) return text;
   return text.split(secret).join("[redacted]");

@@ -2,16 +2,12 @@ import { z } from "zod";
 import type { Application } from "@/domain/application";
 import { FitJudgementSchema, fitScore } from "@/domain/fit";
 import { JobPostingSchema } from "@/domain/job";
-import type { ApplicationRepository, LlmPort, ProfileRepository, ResumeRenderer, StoredProfile } from "@/domain/ports";
+import type { ApplicationRepository, ProfileRepository, ResumeRenderer, StoredProfile } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
-import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers } from "@/domain/questions";
+import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, QuestionSchema, type Answers } from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
-import { findBannedWords, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
-import { coverLetterText, CoverLetterSchema, type CoverLetterDraft } from "@/domain/coverLetter";
-import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM, QUESTIONS_SYSTEM } from "@/prompts/analysis";
-import { profileContext } from "@/prompts/profileContext";
-import { BANNED_WORDS_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
-import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, TELLS_FIX } from "@/prompts/coverLetter";
+import { toPlainText } from "@/domain/writing";
+import { assembleQuestions, cleanResume } from "./workflows";
 
 export class NoProfileError extends Error {
   constructor() {
@@ -21,60 +17,56 @@ export class NoProfileError extends Error {
 
 export class NotFoundError extends Error {}
 
-const GapQuestionsSchema = z.object({ questions: z.array(z.string()).max(MAX_GAP_QUESTIONS) });
+export const MIN_JD_LENGTH = 200;
+const MAX_JD_LENGTH = 50_000;
+const MAX_INPUT_CHARS = 200_000;
+
+// What the browser sends after running the AI steps. Every field is untrusted:
+// it's parsed here, the fit score is recomputed, and the fixed questions come from code.
+const NewApplicationInput = z.object({
+  jdText: z
+    .string()
+    .trim()
+    .min(MIN_JD_LENGTH, "That looks too short for a job description. Paste the whole posting.")
+    .max(MAX_JD_LENGTH, "That job description is too long."),
+  job: JobPostingSchema,
+  fit: FitJudgementSchema,
+  questions: z.array(QuestionSchema).max(FIXED_QUESTIONS.length + MAX_GAP_QUESTIONS),
+});
+
+const SaveResumeInput = z.object({
+  resume: TailoredResumeSchema,
+  answers: z.record(z.string(), z.string().max(4_000)).optional(),
+});
+
+const CoverLetterInput = z.string().trim().min(1, "The cover letter is empty.").max(20_000);
 
 export type ApplicationDeps = {
   userId: string;
   now?: () => Date;
-  llm: LlmPort;
   profiles: ProfileRepository;
   applications: ApplicationRepository;
   renderer: ResumeRenderer;
 };
 
+// Saves what the browser's AI steps produced (see workflows.ts). The Gemini key
+// never reaches this service: it only validates, renders and stores.
 export class ApplicationService {
   constructor(private readonly deps: ApplicationDeps) {}
 
-  // Paste a JD: extract it, score the fit, and prepare clarifying questions.
-  async start(jdText: string): Promise<Application> {
-    const { llm, applications, userId } = this.deps;
-    const { profile } = await this.requireProfile();
-    const profileYaml = profileContext(profile);
+  async create(input: unknown): Promise<Application> {
+    const { jdText, job, fit, questions } = NewApplicationInput.parse(withinSize(input));
+    await this.requireProfile();
+    const gaps = questions.filter((q) => q.id.startsWith("gap")).map((q) => q.question);
 
-    const job = await llm.generateObject({
-      tier: "fast",
-      schema: JobPostingSchema,
-      system: EXTRACT_JOB_SYSTEM,
-      prompt: jdText,
-    });
-
-    const judgement = await llm.generateObject({
-      tier: "fast",
-      schema: FitJudgementSchema,
-      system: ANALYZE_FIT_SYSTEM,
-      prompt: `JOB POSTING (structured):\n${JSON.stringify(job, null, 2)}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
-    });
-    const fit = { ...judgement, score: fitScore(judgement) };
-
-    const gaps = await llm.generateObject({
-      tier: "fast",
-      schema: GapQuestionsSchema,
-      system: QUESTIONS_SYSTEM,
-      prompt: `JOB:\n${JSON.stringify(job, null, 2)}\n\nGAP ANALYSIS:\n${JSON.stringify(fit, null, 2)}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
-    });
-    const questions = [
-      ...FIXED_QUESTIONS,
-      ...gaps.questions.slice(0, MAX_GAP_QUESTIONS).map((question, i) => ({ id: `gap${i + 1}`, question })),
-    ];
-
-    return applications.create({
-      userId,
+    return this.deps.applications.create({
+      userId: this.deps.userId,
       company: job.company || "Unknown company",
       role: job.role || "Unknown role",
       jdText,
       job,
-      fit,
-      questions,
+      fit: { ...fit, score: fitScore(fit) },
+      questions: assembleQuestions(gaps),
       answers: null,
       resume: null,
       typSource: null,
@@ -88,104 +80,24 @@ export class ApplicationService {
     });
   }
 
-  // Answers in, tailored resume PDF out.
-  async generate(id: number, answers: Answers): Promise<Application> {
+  // A new or revised resume. Revisions send no answers, so the earlier ones are kept.
+  async saveResume(id: number, input: unknown): Promise<Application> {
+    const parsed = SaveResumeInput.parse(withinSize(input));
     const app = await this.requireApplication(id);
     const { profile } = await this.requireProfile();
-    const qa = app.questions.map((q) => `Q: ${q.question}\nA: ${answers[q.id]?.trim() || "(no answer)"}`).join("\n\n");
-    const prompt = `${this.tailorContext(profile, app)}\n\nCANDIDATE'S ANSWERS TO CLARIFYING QUESTIONS:\n${qa}`;
-
-    const resume = await this.tailor(profile, prompt);
-    return this.renderAndSave(app, profile, resume, { answers });
+    const answers = parsed.answers ? onlyAskedQuestions(app, parsed.answers) : undefined;
+    // Cleaned again against the stored profile: the browser's copy isn't trusted.
+    return this.renderAndSave(app, profile, cleanResume(profile, parsed.resume), answers ? { answers } : {});
   }
 
-  // Free-text feedback on the current resume, e.g. "lead with the Pub/Sub work".
-  async revise(id: number, feedback: string): Promise<Application> {
-    const app = await this.requireApplication(id);
-    if (!app.resume) throw new Error("Generate the resume before revising it.");
-    const { profile } = await this.requireProfile();
-    const prompt = `${this.tailorContext(profile, app)}\n\nCURRENT RESUME:\n${JSON.stringify(app.resume, null, 2)}\n\nREVISION REQUEST (change only what this asks, keep the rest):\n${feedback}`;
-
-    const resume = await this.tailor(profile, prompt);
-    return this.renderAndSave(app, profile, resume, {});
-  }
-
-  // A plain-text cover letter: drafted, run through a humanizer pass, then checked
-  // for leftover AI phrasing (one more rewrite if any is found).
-  async writeCoverLetter(id: number): Promise<Application> {
+  async saveCoverLetter(id: number, text: unknown): Promise<Application> {
+    const coverLetter = toPlainText(CoverLetterInput.parse(text));
     const app = await this.requireApplication(id);
     if (!app.resume) throw new Error("Generate the resume before writing a cover letter.");
-    const { profile } = await this.requireProfile();
-    const { llm } = this.deps;
-    const qa = app.questions
-      .map((q) => `Q: ${q.question}\nA: ${app.answers?.[q.id]?.trim() || "(no answer)"}`)
-      .join("\n\n");
-    const context = `${this.tailorContext(profile, app)}\n\nTAILORED RESUME:\n${JSON.stringify(app.resume, null, 2)}\n\nCANDIDATE'S ANSWERS:\n${qa}`;
-    const asText = (d: CoverLetterDraft) => d.paragraphs.join("\n\n");
-    const voice = `VOICE SAMPLE:\n${profile.writing_style.voice_sample || "(none)"}`;
-
-    const draft = await llm.generateObject({
-      tier: "write",
-      schema: CoverLetterSchema,
-      system: COVER_LETTER_SYSTEM,
-      prompt: context,
-    });
-    let letter = await llm.generateObject({
-      tier: "write",
-      schema: CoverLetterSchema,
-      system: HUMANIZE_SYSTEM,
-      prompt: `${voice}\n\nLETTER:\n${asText(draft)}`,
-    });
-
-    const tells = findWritingTells(asText(letter));
-    if (tells.length > 0) {
-      letter = await llm.generateObject({
-        tier: "write",
-        schema: CoverLetterSchema,
-        system: HUMANIZE_SYSTEM,
-        prompt: `${voice}\n\nLETTER:\n${asText(letter)}\n\n${TELLS_FIX(tells)}`,
-      });
-    }
-
-    const clean = { paragraphs: letter.paragraphs.map(toPlainText) };
-    const coverLetter = coverLetterText(clean, profile.personal.name);
     return this.deps.applications.update(this.deps.userId, app.id, { coverLetter });
   }
 
-  private tailorContext(profile: Profile, app: Application): string {
-    const style = profile.writing_style;
-    return [
-      `JOB POSTING (raw):\n${app.jdText}`,
-      `JOB POSTING (structured):\n${JSON.stringify(app.job, null, 2)}`,
-      `GAP ANALYSIS (score ${app.fit.score}/100):\n${JSON.stringify(app.fit, null, 2)}`,
-      `CANDIDATE PROFILE:\n${profileContext(profile)}`,
-      `VOICE SAMPLE:\n${style.voice_sample || "(none)"}`,
-      `NEVER MENTION: ${style.avoid_mentioning.join("; ") || "(nothing)"}`,
-      `INCLUDE IF RELEVANT: ${style.always_include_if_relevant.join("; ") || "(nothing)"}`,
-    ].join("\n\n");
-  }
-
-  private async tailor(profile: Profile, prompt: string): Promise<TailoredResume> {
-    const { llm } = this.deps;
-    let resume = await llm.generateObject({
-      tier: "write",
-      schema: TailoredResumeSchema,
-      system: TAILOR_RESUME_SYSTEM,
-      prompt,
-    });
-
-    const banned = findBannedWords(resumeText(resume));
-    if (banned.length > 0) {
-      resume = await llm.generateObject({
-        tier: "write",
-        schema: TailoredResumeSchema,
-        system: TAILOR_RESUME_SYSTEM,
-        prompt: `${prompt}\n\nYOUR DRAFT:\n${JSON.stringify(resume, null, 2)}\n\n${BANNED_WORDS_FIX(banned)}`,
-      });
-    }
-    return cleanResume(profile, resume);
-  }
-
+  // The Typst source is always built here from the resume data, never taken from the browser.
   private async renderAndSave(
     app: Application,
     profile: Profile,
@@ -217,36 +129,11 @@ export class ApplicationService {
   }
 }
 
-function resumeText(r: TailoredResume): string {
-  return [r.summary, ...r.work.flatMap((w) => w.bullets), ...r.projects.flatMap((p) => p.bullets)].join("\n");
+function withinSize(input: unknown): unknown {
+  if (JSON.stringify(input ?? null).length > MAX_INPUT_CHARS) throw new Error("That request is too large.");
+  return input;
 }
 
-// Guards against model mistakes the schema can't express: indexes outside the
-// profile, duplicate roles, roles out of order, and stray em dashes.
-export function cleanResume(profile: Profile, r: TailoredResume): TailoredResume {
-  const seenWork = new Set<number>();
-  const work = r.work
-    .filter(
-      (w) =>
-        w.experienceIndex < profile.experience.length &&
-        !seenWork.has(w.experienceIndex) &&
-        seenWork.add(w.experienceIndex),
-    )
-    .sort((a, b) => a.experienceIndex - b.experienceIndex);
-  if (work.length === 0) throw new Error("The model returned no valid work experience. Try again.");
-
-  const seenProjects = new Set<number>();
-  const projects = r.projects.filter(
-    (p) =>
-      p.projectIndex < profile.projects.length && !seenProjects.has(p.projectIndex) && seenProjects.add(p.projectIndex),
-  );
-
-  const clean = (s: string) => stripEmDashes(s).trim();
-  return {
-    summary: clean(r.summary),
-    work: work.map((w) => ({ ...w, bullets: w.bullets.map(clean) })),
-    projects: projects.map((p) => ({ ...p, bullets: p.bullets.map(clean) })),
-    skills: r.skills.map((s) => ({ category: clean(s.category), items: s.items.map(clean) })),
-    decisions: r.decisions,
-  };
+function onlyAskedQuestions(app: Application, answers: Answers): Answers {
+  return Object.fromEntries(app.questions.filter((q) => q.id in answers).map((q) => [q.id, answers[q.id]]));
 }

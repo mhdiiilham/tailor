@@ -1,6 +1,6 @@
 // Where the Gemini key lives in the browser. "Remember on this device" uses
 // localStorage; otherwise sessionStorage, which the browser clears when the
-// tab closes. The key is never sent anywhere to be stored.
+// tab closes. The key is only ever sent to Google, never to Tailor's server.
 export const KEY_NAME = "tailor.geminiKey";
 
 export type KeyStores = { local: Storage | null; session: Storage | null };

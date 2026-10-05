@@ -5,20 +5,18 @@ import { classifyGeminiError } from "./geminiErrors";
 
 export type GeminiModels = Record<ModelTier, string>;
 
-export function geminiModelsFromEnv(env: Record<string, string | undefined>): GeminiModels {
-  return {
-    fast: env.GEMINI_MODEL_FAST?.trim() || "gemini-flash-lite-latest",
-    write: env.GEMINI_MODEL_WRITE?.trim() || "gemini-flash-latest",
-  };
-}
+export const DEFAULT_GEMINI_MODELS: GeminiModels = {
+  fast: "gemini-flash-lite-latest",
+  write: "gemini-flash-latest",
+};
 
-// Built per request with the caller's own key, which is never stored or logged.
+// Runs in the browser with the user's own key, which goes straight to Google.
 export class GeminiLlm implements LlmPort {
   private readonly models: Record<ModelTier, LanguageModel>;
 
   constructor(
     apiKey: string,
-    private readonly modelIds: GeminiModels,
+    private readonly modelIds: GeminiModels = DEFAULT_GEMINI_MODELS,
   ) {
     const google = createGoogle({ apiKey });
     this.models = { fast: google(modelIds.fast), write: google(modelIds.write) };
@@ -35,7 +33,7 @@ export class GeminiLlm implements LlmPort {
         // Free-tier keys hit per-minute limits; the SDK backs off and honours retry-after.
         maxRetries: 4,
       });
-      console.info(
+      console.debug(
         `[llm] ${this.modelIds[tier]} tier=${tier} in=${result.usage.inputTokens ?? "?"} out=${result.usage.outputTokens ?? "?"} ${Date.now() - started}ms`,
       );
       return result.output as T;

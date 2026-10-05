@@ -5,8 +5,8 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { clearKey, KEY_NAME, readKey, writeKey, type KeyStores } from "./keyStorage";
 import { EmptyState } from "./ui";
 
-// The Gemini key lives only in this browser. It's sent with each AI request
-// and never stored on the server. See ./keyStorage for where it's kept.
+// The Gemini key lives only in this browser and is sent only to Google: the AI steps
+// run here (see useAiTask), so Tailor's server never receives it. See ./keyStorage.
 export const GEMINI_KEY_GUIDE = "https://ai.google.dev/gemini-api/docs/api-key";
 const listeners = new Set<() => void>();
 
@@ -60,11 +60,6 @@ export function useKeyRemembered(): boolean | null {
   );
 }
 
-export function GeminiKeyInput() {
-  const key = useGeminiKey();
-  return <input type="hidden" name="geminiKey" value={key ?? ""} />;
-}
-
 // Shows the form only when this browser has a key.
 export function RequireGeminiKey({ children }: { children: ReactNode }) {
   const key = useGeminiKey();
@@ -84,7 +79,7 @@ export function RequireGeminiKey({ children }: { children: ReactNode }) {
           </>
         }
       >
-        Resumes are written with your own Gemini key. It stays in this browser and is only sent to run your requests.
+        Resumes are written with your own Gemini key. It stays in this browser and goes only to Google. Tailor’s server never receives it.
       </EmptyState>
     );
   }

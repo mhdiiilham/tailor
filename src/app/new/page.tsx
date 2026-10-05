@@ -46,7 +46,7 @@ export default async function NewApplicationPage() {
         title="New application"
         description="Paste the full job description. You’ll see how well you fit and answer a few questions before anything is written."
       />
-      <NewApplicationWorkspace terms={terms} profileCard={profileCard} />
+      <NewApplicationWorkspace profile={profile} terms={terms} profileCard={profileCard} />
     </div>
   );
 }

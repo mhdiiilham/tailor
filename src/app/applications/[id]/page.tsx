@@ -44,6 +44,18 @@ const sectionLinks = (withCoverLetter: boolean) => [
   { href: "#job", label: "Job description" },
 ];
 
+function NeedsProfile() {
+  return (
+    <p className="text-sm text-muted">
+      Your profile is missing.{" "}
+      <Link href="/profile" className="text-accent underline">
+        Add it again
+      </Link>{" "}
+      to write or revise resumes.
+    </p>
+  );
+}
+
 export default async function ApplicationPage({ params }: PageProps<"/applications/[id]">) {
   const user = await requireUser();
   const { id } = await params;
@@ -57,6 +69,16 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
   const generated = app.status === "generated";
   // Changes whenever the PDF is regenerated, so the preview never shows a stale copy.
   const preview = generated ? await applicationRecords().previewFor(user.id, app.id) : null;
+  // The AI steps run in the browser, so they get the user's own profile and this application's data.
+  const userProfile = profile?.profile;
+  const context = {
+    jdText: app.jdText,
+    job: app.job,
+    fit: app.fit,
+    questions: app.questions,
+    answers: app.answers,
+    resume: app.resume,
+  };
   const fileName = resumeFileName(app.company, profile?.profile.personal.name ?? user.name, "pdf");
 
   return (
@@ -196,7 +218,11 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
               </Card>
 
               <section id="cover-letter" className="scroll-mt-24">
-                <CoverLetterPanel id={app.id} text={app.coverLetter} />
+                {userProfile ? (
+                  <CoverLetterPanel id={app.id} text={app.coverLetter} profile={userProfile} app={context} />
+                ) : (
+                  <NeedsProfile />
+                )}
                 <ScrollToResult
                   key={app.coverLetter ? createHash("sha1").update(app.coverLetter).digest("hex") : "none"}
                   applicationId={app.id}
@@ -219,13 +245,13 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
               ) : null}
 
               <Card>
-                <ReviseForm id={app.id} />
+                {userProfile ? <ReviseForm id={app.id} profile={userProfile} app={context} /> : <NeedsProfile />}
                 <details className="border-t border-line pt-4">
                   <summary className="cursor-pointer text-sm text-muted hover:text-ink">
                     Change your answers and regenerate
                   </summary>
                   <div className="pt-4">
-                    <QuestionsForm id={app.id} questions={app.questions} answers={app.answers ?? {}} />
+                    {userProfile ? <QuestionsForm id={app.id} profile={userProfile} app={context} /> : <NeedsProfile />}
                   </div>
                 </details>
               </Card>
@@ -236,7 +262,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
                 title="A few questions first"
                 description="Short answers are fine. Skip any you don’t care about."
               />
-              <QuestionsForm id={app.id} questions={app.questions} answers={app.answers ?? {}} />
+              {userProfile ? <QuestionsForm id={app.id} profile={userProfile} app={context} /> : <NeedsProfile />}
             </Card>
           )}
         </div>

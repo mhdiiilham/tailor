@@ -1,24 +1,20 @@
 "use client";
 
 import { ArrowsClockwise, Check, Copy, EnvelopeSimple } from "@phosphor-icons/react";
-import { useActionState, useEffect, useState } from "react";
-import { writeCoverLetter, type ActionState } from "@/app/actions";
-import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
+import { useEffect, useState } from "react";
+import { saveCoverLetter } from "@/app/actions";
+import { draftCoverLetter, type ApplicationContext } from "@/application/workflows";
+import type { Profile } from "@/domain/profile";
+import { RequireGeminiKey } from "@/components/geminiKey";
 import { cancelScrollToResult, requestScrollToResult } from "@/components/scrollToResult";
-import {
-  Button,
-  Card,
-  FormMessage,
-  PendingSteps,
-  SectionHeader,
-  SubmitButton,
-  type PendingStep,
-} from "@/components/ui";
+import { useAiTask } from "@/components/useAiTask";
+import { Button, Card, FormMessage, PendingSteps, SectionHeader, SubmitButton } from "@/components/ui";
 
-const STEPS: PendingStep[] = [
-  { label: "Drafting from your resume and the job description", startsAt: 0 },
-  { label: "Humanizing pass: removing AI-sounding phrasing", startsAt: 10 },
-  { label: "Final check for leftover clichés", startsAt: 20 },
+// The three steps of draftCoverLetter, in order.
+const STEPS = [
+  "Drafting from your resume and the job description",
+  "Humanizing pass: removing AI-sounding phrasing",
+  "Final check for leftover clichés",
 ];
 
 function CopyButton({ text }: { text: string }) {
@@ -44,11 +40,26 @@ function CopyButton({ text }: { text: string }) {
 }
 
 // The cover letter as plain text, ready to paste into an email or an application form.
-export function CoverLetterPanel({ id, text }: { id: number; text: string | null }) {
-  const [state, action] = useActionState<ActionState, FormData>(writeCoverLetter.bind(null, id), {});
+export function CoverLetterPanel({
+  id,
+  text,
+  profile,
+  app,
+}: {
+  id: number;
+  text: string | null;
+  profile: Profile;
+  app: ApplicationContext;
+}) {
+  const { run, running, step, error } = useAiTask();
   useEffect(() => {
-    if (state.error) cancelScrollToResult();
-  }, [state.error]);
+    if (error) cancelScrollToResult();
+  }, [error]);
+
+  function write() {
+    requestScrollToResult(id);
+    run(async (llm, onStep) => saveCoverLetter(id, await draftCoverLetter(llm, profile, app, onStep)));
+  }
   const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
 
   return (
@@ -74,16 +85,24 @@ export function CoverLetterPanel({ id, text }: { id: number; text: string | null
       ) : null}
 
       <RequireGeminiKey>
-        <form action={action} onSubmit={() => requestScrollToResult(id)} className="grid gap-3">
-          <GeminiKeyInput />
-          <PendingSteps
-            title={text ? "Rewriting your cover letter" : "Writing your cover letter"}
-            steps={STEPS}
-            note="Usually takes 20 to 40 seconds."
-          />
-          <FormMessage {...state} />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            write();
+          }}
+          className="grid gap-3"
+        >
+          {running ? (
+            <PendingSteps
+              title={text ? "Rewriting your cover letter" : "Writing your cover letter"}
+              steps={STEPS}
+              active={step}
+              note="Usually takes 20 to 40 seconds."
+            />
+          ) : null}
+          <FormMessage error={error} />
           <div>
-            <SubmitButton variant={text ? "secondary" : "primary"} pendingLabel="Writing...">
+            <SubmitButton pending={running} variant={text ? "secondary" : "primary"} pendingLabel="Writing...">
               {text ? <ArrowsClockwise size={16} /> : <EnvelopeSimple size={16} />}
               {text ? "Write a new version" : "Generate cover letter"}
             </SubmitButton>

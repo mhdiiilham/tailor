@@ -26,7 +26,10 @@ function setup(stored: Application | null) {
   const updates: unknown[] = [];
   const applications = {
     findById: async (userId: string) => (stored && stored.userId === userId ? stored : null),
-    update: async (_u: string, _id: number, patch: Partial<Application>) => (updates.push(patch), { ...stored!, ...patch }),
+    update: async (_u: string, _id: number, patch: Partial<Application>) => (
+      updates.push(patch),
+      { ...stored!, ...patch }
+    ),
     delete: async () => true,
     purgePdfsCreatedBefore: async (cutoff: Date) => (cutoffs.push(cutoff), 2),
   } as unknown as ApplicationRepository;
@@ -47,7 +50,9 @@ function setup(stored: Application | null) {
 
 describe("ApplicationRecords.pdfFor", () => {
   it("serves the stored PDF while it is fresh", async () => {
-    const { records, compiled } = setup(app({ pdf: Buffer.from("%PDF-stored"), pdfCreatedAt: new Date(now.getTime() - 60_000) }));
+    const { records, compiled } = setup(
+      app({ pdf: Buffer.from("%PDF-stored"), pdfCreatedAt: new Date(now.getTime() - 60_000) }),
+    );
     expect((await records.pdfFor("alice", 1))?.pdf.toString()).toBe("%PDF-stored");
     expect(compiled).toEqual([]);
   });
@@ -81,7 +86,11 @@ describe("ApplicationRecords.purgeExpiredPdfs", () => {
 describe("ApplicationRecords.setStage", () => {
   it("moves the stage and records when it applied", async () => {
     const { records } = setup(app({}));
-    expect(await records.setStage("alice", 1, "applied")).toMatchObject({ stage: "applied", appliedAt: now, stageUpdatedAt: now });
+    expect(await records.setStage("alice", 1, "applied")).toMatchObject({
+      stage: "applied",
+      appliedAt: now,
+      stageUpdatedAt: now,
+    });
   });
 
   it("skips the write when the stage is unchanged", async () => {

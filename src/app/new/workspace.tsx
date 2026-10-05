@@ -1,12 +1,13 @@
 "use client";
 
 import { CheckCircle, Info, Warning } from "@phosphor-icons/react";
-import { useActionState, useMemo, useRef, useState } from "react";
-import { startApplication, type ActionState } from "@/app/actions";
-import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
+import { useMemo, useRef, useState } from "react";
+import type { Profile } from "@/domain/profile";
+import { RequireGeminiKey } from "@/components/geminiKey";
 import { Badge, Button, Card, FormMessage, PendingSteps, SectionHeader, SubmitButton } from "@/components/ui";
 import { ANALYZE_NOTE, ANALYZE_STEPS } from "./analyzeSteps";
 import { checkTerms, looksComplete } from "@/domain/techTerms";
+import { useAnalyze } from "./useAnalyze";
 
 // Gemini counts roughly four characters per token for English text.
 const estimateTokens = (text: string) => Math.ceil(text.length / 4);
@@ -84,16 +85,30 @@ function QuickCheck({ text, terms }: { text: string; terms: string[] }) {
   );
 }
 
-export function NewApplicationWorkspace({ terms, profileCard }: { terms: string[]; profileCard: React.ReactNode }) {
-  const [state, action] = useActionState<ActionState, FormData>(startApplication, {});
+export function NewApplicationWorkspace({
+  profile,
+  terms,
+  profileCard,
+}: {
+  profile: Profile;
+  terms: string[];
+  profileCard: React.ReactNode;
+}) {
+  const { analyze, busy, step, error } = useAnalyze(profile);
   const [text, setText] = useState("");
   const form = useRef<HTMLFormElement>(null);
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <RequireGeminiKey>
-        <form ref={form} action={action} className="overflow-hidden rounded-card border border-line bg-raised">
-          <GeminiKeyInput />
+        <form
+          ref={form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            analyze(text);
+          }}
+          className="overflow-hidden rounded-card border border-line bg-raised"
+        >
           <div className="flex items-center justify-between gap-3 border-b border-line bg-sunken px-5 py-3">
             <label htmlFor="jd" className="text-sm font-medium">
               Job description
@@ -110,19 +125,21 @@ export function NewApplicationWorkspace({ terms, profileCard }: { terms: string[
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) form.current?.requestSubmit();
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !busy) form.current?.requestSubmit();
             }}
             placeholder={"Role: Backend Engineer\nCompany: ...\n\nRequirements:\n- ..."}
             className="block w-full resize-y bg-raised px-5 py-4 font-mono text-[13.5px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
           />
           <div className="grid gap-3 border-t border-line bg-sunken px-5 py-3">
-            <PendingSteps title="Analyzing your fit" steps={ANALYZE_STEPS} note={ANALYZE_NOTE} />
-            <FormMessage {...state} />
+            {busy ? (
+              <PendingSteps title="Analyzing your fit" steps={ANALYZE_STEPS} active={step} note={ANALYZE_NOTE} />
+            ) : null}
+            <FormMessage error={error} />
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Button variant="ghost" className="px-3" onClick={() => setText("")} disabled={!text}>
                 Clear
               </Button>
-              <SubmitButton pendingLabel="Reading the posting...">
+              <SubmitButton pending={busy} pendingLabel="Reading the posting...">
                 Analyze fit
                 <kbd className="rounded-chip border border-on-accent/30 px-1.5 font-mono text-[10px]">⌘↵</kbd>
               </SubmitButton>

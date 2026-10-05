@@ -82,7 +82,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
               from your profile.
             </p>
           </div>
-          <NewApplicationForm />
+          <NewApplicationForm profile={profile.profile} />
         </Card>
       ) : null}
 

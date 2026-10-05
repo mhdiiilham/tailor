@@ -2,19 +2,20 @@
 
 import { CheckCircle, CircleNotch } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 
-export type PendingStep = { label: string; startsAt: number };
-
-// Shown inside a form while its action runs. Steps advance on a timer (the server
-// doesn't report progress), and the last one stays active until the form is done.
-export function PendingSteps({ title, steps, note }: { title: string; steps: PendingStep[]; note?: string }) {
-  const { pending } = useFormStatus();
-  if (!pending) return null;
-  return <Running title={title} steps={steps} note={note} />;
-}
-
-function Running({ title, steps, note }: { title: string; steps: PendingStep[]; note?: string }) {
+// Shown while the browser runs the AI steps. `active` is the step that's running now
+// (reported by the workflow), so the list moves with the real work, not a guess.
+export function PendingSteps({
+  title,
+  steps,
+  active,
+  note,
+}: {
+  title: string;
+  steps: string[];
+  active: number;
+  note?: string;
+}) {
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
@@ -22,8 +23,6 @@ function Running({ title, steps, note }: { title: string; steps: PendingStep[]; 
     const timer = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 500);
     return () => clearInterval(timer);
   }, []);
-
-  const active = steps.reduce((current, step, i) => (seconds >= step.startsAt ? i : current), 0);
 
   return (
     <div role="status" aria-live="polite" className="grid gap-4 rounded-ui border border-accent/30 bg-accent-soft p-4">
@@ -42,7 +41,7 @@ function Running({ title, steps, note }: { title: string; steps: PendingStep[]; 
           const current = i === active;
           return (
             <li
-              key={step.label}
+              key={step}
               className={`flex items-center gap-2.5 text-sm ${done ? "text-muted" : current ? "text-ink" : "text-faint"}`}
             >
               {done ? (
@@ -54,7 +53,7 @@ function Running({ title, steps, note }: { title: string; steps: PendingStep[]; 
                   <span className="size-1.5 rounded-full bg-line" />
                 </span>
               )}
-              {step.label}
+              {step}
             </li>
           );
         })}

@@ -1,17 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { generateResume, reviseResume, type ActionState } from "@/app/actions";
-import type { Answers, Question } from "@/domain/questions";
-import { GeminiKeyInput, RequireGeminiKey } from "@/components/geminiKey";
+import { useEffect, useRef } from "react";
+import { saveResume } from "@/app/actions";
+import { reviseResume, tailorResume, type ApplicationContext } from "@/application/workflows";
+import type { Profile } from "@/domain/profile";
+import type { Answers } from "@/domain/questions";
+import { RequireGeminiKey } from "@/components/geminiKey";
 import { cancelScrollToResult, requestScrollToResult } from "@/components/scrollToResult";
-import { Field, FormMessage, PendingSteps, SubmitButton, TextArea, type PendingStep } from "@/components/ui";
+import { useAiTask } from "@/components/useAiTask";
+import { Field, FormMessage, PendingSteps, SubmitButton, TextArea } from "@/components/ui";
 
-const GENERATE_STEPS: PendingStep[] = [
-  { label: "Writing the resume from your profile", startsAt: 0 },
-  { label: "Checking the wording", startsAt: 12 },
-  { label: "Building the PDF", startsAt: 18 },
-];
+// Step 0 and 1 are reported by the workflow; step 2 is the save, where the server builds the PDF.
+const GENERATE_STEPS = ["Writing the resume from your profile", "Checking the wording", "Building the PDF"];
 
 // Scroll to the new resume once it appears, unless the request failed.
 function useScrollAfterSuccess(error: string | undefined) {
@@ -20,26 +20,52 @@ function useScrollAfterSuccess(error: string | undefined) {
   }, [error]);
 }
 
-export function QuestionsForm({ id, questions, answers }: { id: number; questions: Question[]; answers: Answers }) {
-  const [state, action] = useActionState<ActionState, FormData>(generateResume.bind(null, id), {});
-  useScrollAfterSuccess(state.error);
+type Props = { id: number; profile: Profile; app: ApplicationContext };
+
+export function QuestionsForm({ id, profile, app }: Props) {
+  const { run, running, step, error } = useAiTask();
+  useScrollAfterSuccess(error);
+
+  function submit(form: HTMLFormElement) {
+    const answers: Answers = {};
+    for (const [name, value] of new FormData(form).entries()) {
+      if (name.startsWith("q:")) answers[name.slice(2)] = String(value);
+    }
+    requestScrollToResult(id);
+    run(async (llm, onStep) => {
+      const resume = await tailorResume(llm, profile, app, answers, onStep);
+      onStep(2);
+      return saveResume(id, { resume, answers });
+    });
+  }
+
   return (
     <RequireGeminiKey>
-      <form action={action} onSubmit={() => requestScrollToResult(id)} className="grid gap-6">
-        <GeminiKeyInput />
-        {questions.map((q) => (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit(e.currentTarget);
+        }}
+        className="grid gap-6"
+      >
+        {app.questions.map((q) => (
           <Field key={q.id} label={q.question} htmlFor={`q-${q.id}`}>
-            <TextArea id={`q-${q.id}`} name={`q:${q.id}`} rows={3} defaultValue={answers[q.id] ?? ""} />
+            <TextArea id={`q-${q.id}`} name={`q:${q.id}`} rows={3} defaultValue={app.answers?.[q.id] ?? ""} />
           </Field>
         ))}
-        <PendingSteps
-          title="Writing your resume"
-          steps={GENERATE_STEPS}
-          note="Usually takes 15 to 40 seconds. The page scrolls to the resume when it's ready."
-        />
-        <FormMessage {...state} />
+        {running ? (
+          <PendingSteps
+            title="Writing your resume"
+            steps={GENERATE_STEPS}
+            active={step}
+            note="Usually takes 15 to 40 seconds. The page scrolls to the resume when it's ready."
+          />
+        ) : null}
+        <FormMessage error={error} />
         <div>
-          <SubmitButton pendingLabel="Writing your resume...">Generate resume</SubmitButton>
+          <SubmitButton pending={running} pendingLabel="Writing your resume...">
+            Generate resume
+          </SubmitButton>
         </div>
       </form>
     </RequireGeminiKey>
@@ -53,10 +79,21 @@ const SUGGESTIONS = [
   "Mirror the job description's wording more closely",
 ];
 
-export function ReviseForm({ id }: { id: number }) {
-  const [state, action] = useActionState<ActionState, FormData>(reviseResume.bind(null, id), {});
+export function ReviseForm({ id, profile, app }: Props) {
+  const { run, running, step, error, notice } = useAiTask();
   const feedback = useRef<HTMLTextAreaElement>(null);
-  useScrollAfterSuccess(state.error);
+  useScrollAfterSuccess(error);
+
+  function submit() {
+    const request = feedback.current?.value.trim() ?? "";
+    run(async (llm, onStep) => {
+      if (!request) return { error: "Say what you want changed." };
+      requestScrollToResult(id);
+      const resume = await reviseResume(llm, profile, app, request, onStep);
+      onStep(2);
+      return saveResume(id, { resume });
+    }, "Updated.");
+  }
 
   // Chips only fill in the request; nothing runs until Revise is pressed.
   function suggest(text: string) {
@@ -68,8 +105,13 @@ export function ReviseForm({ id }: { id: number }) {
 
   return (
     <RequireGeminiKey>
-      <form action={action} onSubmit={() => requestScrollToResult(id)} className="grid gap-3">
-        <GeminiKeyInput />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+        className="grid gap-3"
+      >
         <Field label="Ask for a revision" htmlFor="feedback">
           <TextArea
             ref={feedback}
@@ -91,9 +133,12 @@ export function ReviseForm({ id }: { id: number }) {
             </button>
           ))}
         </div>
-        <FormMessage {...state} />
+        {running ? <PendingSteps title="Revising your resume" steps={GENERATE_STEPS} active={step} /> : null}
+        <FormMessage error={error} notice={notice} />
         <div className="flex justify-end">
-          <SubmitButton pendingLabel="Revising...">Revise resume</SubmitButton>
+          <SubmitButton pending={running} pendingLabel="Revising...">
+            Revise resume
+          </SubmitButton>
         </div>
       </form>
     </RequireGeminiKey>
