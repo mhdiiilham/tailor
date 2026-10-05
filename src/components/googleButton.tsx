@@ -1,9 +1,13 @@
 "use client";
 
+import { Roboto } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { authClient } from "@/infrastructure/auth/authClient";
+
+// Google's sign-in button spec asks for Roboto Medium.
+const roboto = Roboto({ weight: "500", subsets: ["latin"] });
 
 // Sign-in is only possible after confirming age and accepting the terms.
 export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
@@ -30,21 +34,21 @@ export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
           .
         </span>
       </label>
-      {/* Google's own button artwork (Dark, pill), unmodified, per its branding guidelines. */}
+      {/* Built to Google's "Dark" button spec: official G logo, #131314 fill, #8E918F border,
+          #E3E3E3 Roboto Medium text, and Google's 8% / 12% state layers on hover and press. */}
       <button
         type="button"
-        aria-label="Sign in with Google"
         aria-busy={pending}
         disabled={!agreed || pending}
         onClick={async () => {
           setPending(true);
           await authClient.signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/?error=access" });
         }}
-        className={`rounded-full transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "justify-self-center" : ""}`}
+        className={`${roboto.className} inline-flex h-11 items-center justify-center gap-2.5 rounded-full border border-[#8E918F] bg-[#131314] px-4 text-sm text-[#E3E3E3] transition-colors hover:bg-[#242425] active:bg-[#2c2c2d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#131314] ${fullWidth ? "w-full" : ""}`}
       >
-        <Image src="/google-signin-dark.svg" alt="" width={198} height={44} priority />
+        <Image src="/google-g.svg" alt="" width={20} height={20} priority />
+        {pending ? "Opening Google..." : "Sign in with Google"}
       </button>
-      {pending ? <p className={`text-xs text-faint ${fullWidth ? "text-center" : ""}`}>Opening Google...</p> : null}
     </div>
   );
 }
