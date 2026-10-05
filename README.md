@@ -232,4 +232,6 @@ src/app/             pages, server actions, and the auth, health and PDF routes
 
 ## License
 
-[AGPL-3.0](LICENSE). You can use, change and host Tailor. If you run a modified version for other people, the AGPL asks you to offer them its source code too. Point `SOURCE_URL` in `src/app/seo/site.ts` at your fork; it's linked in the footer of every page and on the landing page.
+Copyright (C) 2026 Muhammad Ilham. Licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+You can use, change and host Tailor. If you run a modified version for other people, the AGPL asks you to offer them its source code too. Point `SOURCE_URL` in `src/app/seo/site.ts` at your fork; it's linked in the footer of every page and on the landing page.
