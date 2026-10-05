@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { stringify } from "yaml";
 import { profileRepository } from "@/container";
 import { PageHeader } from "@/components/ui";
@@ -7,6 +8,8 @@ import { GuidePanel } from "./guidePanel";
 import { PROFILE_TEMPLATE } from "./profileGuide";
 
 const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+
+export const metadata: Metadata = { title: "Profile" };
 
 export default async function ProfilePage() {
   const user = await requireUser();

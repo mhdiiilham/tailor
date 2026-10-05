@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/app/seo/site";
 import { CONTACT_EMAIL, LegalPage, LegalSection } from "@/components/legal/legalPage";
 
-export const metadata: Metadata = { title: "Privacy Policy · Tailor" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Policy",
+  description:
+    "What Tailor stores, what it sends to Google Gemini, which cookies it sets and how to delete your profile, applications and account.",
+  path: "/privacy",
+});
 
 const cookies = [
   {

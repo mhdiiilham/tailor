@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { pageMetadata } from "@/app/seo/site";
 import { CONTACT_EMAIL, LegalPage, LegalSection } from "@/components/legal/legalPage";
 
-export const metadata: Metadata = { title: "Terms and Conditions · Tailor" };
+export const metadata: Metadata = pageMetadata({
+  title: "Terms and Conditions",
+  description:
+    "The terms for using Tailor: who can use it, your Gemini API key and its costs, the content you upload and the resumes it generates.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

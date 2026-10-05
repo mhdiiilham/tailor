@@ -5,15 +5,30 @@ import Link from "next/link";
 import { NavLinks } from "@/components/navLinks";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "./seo/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "Tailor",
-  description: "Paste a job description, get a tailored resume.",
-};
+// Read per request (every page is dynamic), so the same image works on any domain.
+// No canonical or og:url here: public pages set their own, and a default would point every page at "/".
+export function generateMetadata(): Metadata {
+  return {
+    metadataBase: new URL(siteUrl()),
+    title: { default: SITE_TITLE, template: `%s | ${SITE_NAME}` },
+    description: SITE_DESCRIPTION,
+    applicationName: SITE_NAME,
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      locale: "en_US",
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+    },
+    twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
+  };
+}
 
 // Matches the page background, so the mobile browser bar blends into the header.
 export const viewport: Viewport = {

@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { DeleteAccount } from "./deleteAccount";
 import { GeminiKeySettings } from "./geminiKeySettings";
+
+export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const user = await requireUser();

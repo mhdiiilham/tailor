@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, Suspense } from "react";
 import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
@@ -9,9 +10,13 @@ import { summarize, toRow } from "./dashboard/rows";
 import { ApplicationsTableSkeleton, StatusStripSkeleton } from "./dashboard/skeletons";
 import { StatusStrip } from "./dashboard/statusStrip";
 import { Landing } from "./landing";
+import { SITE_DESCRIPTION, pageMetadata } from "./seo/site";
 import { NewApplicationForm } from "./new/form";
 
 export const dynamic = "force-dynamic";
+
+// "/?error=..." after a refused sign-in is the same page.
+export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: "/" });
 
 // The strip and the table both need the list; cache() makes it one query per request.
 const loadRows = cache(async (userId: string) => (await applicationRepository().list(userId)).map(toRow));

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IdentificationCard } from "@phosphor-icons/react/dist/ssr";
@@ -6,6 +7,8 @@ import { profileTerms } from "@/domain/techTerms";
 import { Card, PageHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { NewApplicationWorkspace } from "./workspace";
+
+export const metadata: Metadata = { title: "New application" };
 
 export const dynamic = "force-dynamic";
 

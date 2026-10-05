@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import { GoogleButton } from "@/components/googleButton";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "./seo/site";
 
 const principles = [
   {
@@ -89,9 +90,31 @@ const security = [
   },
 ];
 
+// Describes what's on this page: a free web app. "<" is escaped so the JSON can't close the script tag.
+function StructuredData() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: SITE_NAME,
+    url: siteUrl(),
+    description: SITE_DESCRIPTION,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Any",
+    browserRequirements: "Requires JavaScript",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }}
+    />
+  );
+}
+
 export function Landing({ error }: { error?: string }) {
   return (
     <div className="grid gap-24 md:gap-32">
+      <StructuredData />
       <section id="signin" className="grid scroll-mt-24 justify-items-center gap-8 pt-6 text-center md:pt-14">
         <p className="font-mono text-xs uppercase tracking-wider text-faint">Bring your own key · Free to use</p>
         <h1 className="max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight md:text-6xl">
