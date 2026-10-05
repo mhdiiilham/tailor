@@ -99,7 +99,13 @@ export async function reviseResume(
   onStep: OnStep = noop,
 ): Promise<TailoredResume> {
   if (!app.resume) throw new Error("Generate the resume before revising it.");
-  const prompt = `${tailorContext(profile, app)}\n\nCURRENT RESUME:\n${JSON.stringify(app.resume, null, 2)}\n\nREVISION REQUEST (change only what this asks, keep the rest):\n${feedback}`;
+  const prompt = [
+    tailorContext(profile, app),
+    // The answers still apply: without them a revision can drift from what the candidate asked to lead with.
+    `CANDIDATE'S ANSWERS TO CLARIFYING QUESTIONS:\n${qaLines(app, app.answers ?? {})}`,
+    `CURRENT RESUME:\n${JSON.stringify(app.resume, null, 2)}`,
+    `REVISION REQUEST (change only what this asks, keep the rest):\n${feedback}`,
+  ].join("\n\n");
   return tailor(llm, profile, prompt, onStep);
 }
 

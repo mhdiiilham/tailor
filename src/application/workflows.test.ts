@@ -129,6 +129,15 @@ describe("reviseResume", () => {
     expect(llm.requests[0].prompt).toContain("Lead with latency");
   });
 
+  it("keeps the candidate's answers in the context, so a revision doesn't drift from them", async () => {
+    const llm = new FakeLlm([resume]);
+
+    await reviseResume(llm, profile, { ...app, resume, answers: { lead: "The latency win" } }, "Shorter bullets");
+
+    expect(llm.requests[0].prompt).toContain("CANDIDATE'S ANSWERS TO CLARIFYING QUESTIONS");
+    expect(llm.requests[0].prompt).toContain("A: The latency win");
+  });
+
   it("needs a resume first", async () => {
     await expect(reviseResume(new FakeLlm([]), profile, app, "x")).rejects.toThrow(/resume/);
   });
