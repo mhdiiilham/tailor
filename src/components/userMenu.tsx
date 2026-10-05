@@ -4,6 +4,7 @@ import { SignOut } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/infrastructure/auth/authClient";
 import { setGeminiKey } from "./geminiKey";
+import { clearGeminiUsage } from "./geminiUsage";
 import { Button } from "./ui";
 
 export function UserMenu({ name, image }: { name: string; image: string | null }) {
@@ -11,6 +12,7 @@ export function UserMenu({ name, image }: { name: string; image: string | null }
 
   async function signOut() {
     setGeminiKey("");
+    clearGeminiUsage();
     await authClient.signOut();
     router.push("/");
     router.refresh();

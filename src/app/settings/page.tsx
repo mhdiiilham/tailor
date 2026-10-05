@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { DeleteAccount } from "./deleteAccount";
 import { GeminiKeySettings } from "./geminiKeySettings";
+import { GeminiUsageCard } from "./geminiUsage";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -12,6 +13,7 @@ export default async function SettingsPage() {
     <div className="mx-auto grid w-full max-w-4xl gap-6">
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
+      <GeminiUsageCard />
       <DeleteAccount />
     </div>
   );

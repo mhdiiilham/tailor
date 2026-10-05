@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccount } from "@/app/actions";
 import { setGeminiKey } from "@/components/geminiKey";
+import { clearGeminiUsage } from "@/components/geminiUsage";
 import { Button, Card, FormMessage } from "@/components/ui";
 
 export function DeleteAccount() {
@@ -19,6 +20,7 @@ export function DeleteAccount() {
       const result = await deleteAccount();
       if (result.error) return setError(result.error);
       setGeminiKey("");
+      clearGeminiUsage();
       router.push("/");
       router.refresh();
     });

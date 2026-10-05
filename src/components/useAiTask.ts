@@ -8,6 +8,7 @@ import type { LlmPort } from "@/domain/ports";
 import { describeAiFailure } from "@/infrastructure/llm/geminiErrors";
 import { GeminiLlm } from "@/infrastructure/llm/geminiLlm";
 import { useGeminiKey } from "./geminiKey";
+import { recordGeminiCall } from "./geminiUsage";
 
 export type AiTaskState = { running: boolean; step: number; error?: string; notice?: string };
 
@@ -27,7 +28,9 @@ export function useAiTask() {
     }
     setState({ running: true, step: 0 });
     try {
-      const result = await task(new GeminiLlm(key), (step) => setState((s) => ({ ...s, step })));
+      const result = await task(new GeminiLlm(key, { onUsage: recordGeminiCall }), (step) =>
+        setState((s) => ({ ...s, step })),
+      );
       if (result?.error) {
         setState({ running: false, step: 0, error: result.error });
         return false;
