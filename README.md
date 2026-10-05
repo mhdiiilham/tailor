@@ -63,7 +63,7 @@ Copy `.env.example` to `.env` (Docker) or `.env.local` (local development) and f
 | `POSTGRES_PASSWORD` | Compose only | Password for the bundled Postgres in `docker-compose.yml`. |
 | `TYPST_BIN` | no | Path to the Typst binary. Default `typst`; already in the Docker image. |
 
-No Gemini key goes here. Users add their own in the app, and the server never receives it. The models (`gemini-flash-lite-latest` for analysis, `gemini-flash-latest` for writing) are set in `src/infrastructure/llm/geminiLlm.ts`.
+No Gemini key goes here. Users add their own in the app, and the server never receives it. The default models (`gemini-flash-lite-latest` for analysis, `gemini-flash-latest` for writing) are set in `src/infrastructure/llm/geminiLlm.ts`. Each person can pick other models in Settings, from the list Google returns for their key; the choice is kept in their browser.
 
 Never commit `.env` or put real values in `.env.example`.
 
