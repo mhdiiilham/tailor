@@ -24,8 +24,7 @@ export type Application = {
   pdfCreatedAt: Date | null;
   // Plain text, ready to paste. Null until the user asks for one.
   coverLetter: string | null;
-  // The posting's URL and the person's own notes. Optional, for any application.
-  jobUrl: string | null;
+  // The person's own notes (recruiter, salary, follow-ups). Optional, for any application.
   notes: string | null;
   status: ApplicationStatus;
   // Job-hunt progress, set by the user.

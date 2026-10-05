@@ -2,7 +2,7 @@ export { Button, ButtonAnchor, ButtonLink, buttonClass, type ButtonSize, type Bu
 export { Badge, type BadgeTone } from "./badge";
 export { Card } from "./card";
 export { EmptyState } from "./emptyState";
-export { Field, TextArea, TextInput } from "./field";
+export { Field, Select, TextArea, TextInput } from "./field";
 export { FormMessage } from "./formMessage";
 export { PageHeader, SectionHeader } from "./pageHeader";
 export { PendingSteps } from "./pendingSteps";

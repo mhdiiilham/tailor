@@ -250,7 +250,6 @@ describe("ApplicationService.track", () => {
   const job = {
     company: "UangAI",
     role: "Senior Fullstack Engineer",
-    jobUrl: "https://www.linkedin.com/jobs/view/123",
     location: "Remote",
     stage: "applied",
     appliedOn: "2026-10-01",
@@ -266,7 +265,6 @@ describe("ApplicationService.track", () => {
       status: "tracked",
       company: "UangAI",
       role: "Senior Fullstack Engineer",
-      jobUrl: "https://www.linkedin.com/jobs/view/123",
       notes: "Messaged Deveyana",
       fit: null,
       stage: "applied",
@@ -289,10 +287,17 @@ describe("ApplicationService.track", () => {
     expect(later.appliedAt).toBeNull();
   });
 
-  it("needs a company and role, and only accepts web links", async () => {
+  it("needs a company and role", async () => {
     const { service } = setup();
     await expect(service.track({ company: " ", role: "Engineer" })).rejects.toThrow();
-    await expect(service.track({ ...job, jobUrl: "javascript:alert(1)" })).rejects.toThrow(/link/);
+    await expect(service.track({ company: "Acme", role: "" })).rejects.toThrow();
+  });
+
+  it("keeps a pasted job description for analyzing later", async () => {
+    const { service } = setup();
+    const app = await service.track({ company: "Acme", role: "Engineer", jdText: "  We need Go.  " });
+    expect(app.jdText).toBe("We need Go.");
+    expect((await service.track({ company: "Acme", role: "Engineer" })).jdText).toBe("");
   });
 
   it("does not need a profile", async () => {
@@ -301,12 +306,11 @@ describe("ApplicationService.track", () => {
 });
 
 describe("ApplicationService.analyzeTracked", () => {
-  it("turns a tracked job into an analyzed one, keeping its stage, dates, link and notes", async () => {
+  it("turns a tracked job into an analyzed one, keeping its stage, dates and notes", async () => {
     const { service } = setup();
     const tracked = await service.track({
       company: "UangAI",
       role: "Senior Fullstack Engineer",
-      jobUrl: "https://example.com/job",
       appliedOn: "2026-10-01",
       notes: "Referral",
     });
@@ -318,7 +322,6 @@ describe("ApplicationService.analyzeTracked", () => {
       status: "questions",
       company: "UangAI",
       role: "Senior Fullstack Engineer",
-      jobUrl: "https://example.com/job",
       notes: "Referral",
       stage: "applied",
       appliedAt: new Date("2026-10-01T00:00:00Z"),
@@ -340,21 +343,12 @@ describe("ApplicationService.analyzeTracked", () => {
   });
 });
 
-describe("ApplicationService.saveDetails", () => {
-  it("saves the link and notes, with blanks stored as empty", async () => {
+describe("ApplicationService.saveNotes", () => {
+  it("saves notes, with blanks stored as empty", async () => {
     const { service } = setup();
     const app = await service.create(analysis);
 
-    const saved = await service.saveDetails(app.id, { jobUrl: " https://example.com/x ", notes: "Call on Friday" });
-    expect(saved).toMatchObject({ jobUrl: "https://example.com/x", notes: "Call on Friday" });
-
-    const cleared = await service.saveDetails(app.id, { jobUrl: "", notes: "  " });
-    expect(cleared).toMatchObject({ jobUrl: null, notes: null });
-  });
-
-  it("rejects a link that isn't a web address", async () => {
-    const { service } = setup();
-    const app = await service.create(analysis);
-    await expect(service.saveDetails(app.id, { jobUrl: "file:///etc/passwd", notes: "" })).rejects.toThrow(/link/);
+    expect(await service.saveNotes(app.id, { notes: "Call on Friday" })).toMatchObject({ notes: "Call on Friday" });
+    expect(await service.saveNotes(app.id, { notes: "  " })).toMatchObject({ notes: null });
   });
 });

@@ -2,11 +2,11 @@
 
 import { FloppyDisk, NotePencil } from "@phosphor-icons/react";
 import { useState, useTransition } from "react";
-import { saveApplicationDetails, type ActionState } from "@/app/actions";
-import { Button, Card, Field, FormMessage, SectionHeader, TextArea, TextInput } from "@/components/ui";
+import { saveApplicationNotes, type ActionState } from "@/app/actions";
+import { Button, Card, FormMessage, SectionHeader, TextArea } from "@/components/ui";
 
-// The posting's link and the person's own notes (recruiter, salary, follow-ups).
-export function DetailsCard({ id, jobUrl, notes }: { id: number; jobUrl: string | null; notes: string | null }) {
+// The person's own notes on an application: recruiter, salary, when to follow up.
+export function NotesCard({ id, notes }: { id: number; notes: string | null }) {
   const [state, setState] = useState<ActionState>({});
   const [pending, startTransition] = useTransition();
 
@@ -14,41 +14,23 @@ export function DetailsCard({ id, jobUrl, notes }: { id: number; jobUrl: string 
     <Card>
       <SectionHeader
         icon={<NotePencil size={18} />}
-        title="Link and notes"
-        description="Only you see these: the posting, who you talked to, salary, when to follow up."
+        title="Notes"
+        description="Only you see these: who you talked to, salary, when to follow up."
       />
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const form = new FormData(e.currentTarget);
-          startTransition(async () =>
-            setState(
-              await saveApplicationDetails(id, {
-                jobUrl: String(form.get("jobUrl") ?? ""),
-                notes: String(form.get("notes") ?? ""),
-              }),
-            ),
-          );
+          const text = String(new FormData(e.currentTarget).get("notes") ?? "");
+          startTransition(async () => setState(await saveApplicationNotes(id, text)));
         }}
-        className="grid gap-4"
+        className="grid gap-3"
       >
-        <Field label="Job link" htmlFor={`job-url-${id}`}>
-          <TextInput
-            id={`job-url-${id}`}
-            name="jobUrl"
-            type="url"
-            defaultValue={jobUrl ?? ""}
-            placeholder="https://www.linkedin.com/jobs/view/..."
-          />
-        </Field>
-        <Field label="Notes" htmlFor={`notes-${id}`}>
-          <TextArea id={`notes-${id}`} name="notes" rows={4} defaultValue={notes ?? ""} />
-        </Field>
+        <TextArea name="notes" rows={4} maxLength={5000} defaultValue={notes ?? ""} aria-label="Notes" />
         <FormMessage {...state} />
         <div>
           <Button type="submit" variant="secondary" disabled={pending}>
             <FloppyDisk size={16} />
-            {pending ? "Saving..." : "Save"}
+            {pending ? "Saving..." : "Save notes"}
           </Button>
         </div>
       </form>

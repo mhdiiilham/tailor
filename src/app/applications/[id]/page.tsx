@@ -1,14 +1,7 @@
 import { createHash } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowSquareOut,
-  CaretRight,
-  DownloadSimple,
-  Lightning,
-  MagnifyingGlass,
-  Sparkle,
-} from "@phosphor-icons/react/dist/ssr";
+import { CaretRight, DownloadSimple, Lightning, MagnifyingGlass, Sparkle } from "@phosphor-icons/react/dist/ssr";
 import { applicationRecords, applicationRepository, profileRepository } from "@/container";
 import type { Application } from "@/domain/application";
 import { LOW_FIT_THRESHOLD, matchCounts, type FitAnalysis } from "@/domain/fit";
@@ -20,7 +13,7 @@ import { StageSelect } from "@/components/stageSelect";
 import { ScrollToResult } from "@/components/scrollToResult";
 import { AnalyzeTrackedForm } from "./analyzeTracked";
 import { CoverLetterPanel } from "./coverLetter";
-import { DetailsCard } from "./details";
+import { NotesCard } from "./details";
 import { DeleteApplication } from "./deleteApplication";
 import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
@@ -79,21 +72,6 @@ function Breadcrumb({ role }: { role: string }) {
   );
 }
 
-function JobLink({ url }: { url: string | null }) {
-  if (!url) return null;
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-sm text-accent hover:underline"
-    >
-      View the job posting
-      <ArrowSquareOut size={13} />
-    </a>
-  );
-}
-
 // A job added only to track it: its details, notes, and a way to analyze it later.
 function TrackedApplication({ app, profile }: { app: Application; profile: Profile | null }) {
   return (
@@ -113,21 +91,35 @@ function TrackedApplication({ app, profile }: { app: Application; profile: Profi
         <div className="flex flex-wrap items-center gap-3 text-sm text-faint">
           <StageSelect id={app.id} stage={app.stage} />
           {app.appliedAt ? <span>Applied {dateFormat.format(app.appliedAt)}</span> : null}
-          <JobLink url={app.jobUrl} />
         </div>
       </header>
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <DetailsCard id={app.id} jobUrl={app.jobUrl} notes={app.notes} />
+        <NotesCard id={app.id} notes={app.notes} />
         <Card>
           <SectionHeader
             icon={<MagnifyingGlass size={18} />}
             title="Analyze and tailor"
-            description="Paste the job description to score your fit and write a tailored resume. This job keeps its stage, dates and notes."
+            description={
+              app.jdText
+                ? "Your saved job description is below. Analyze it to score your fit and write a tailored resume; this job keeps its stage, dates and notes."
+                : "Paste the job description to score your fit and write a tailored resume. This job keeps its stage, dates and notes."
+            }
           />
-          {profile ? <AnalyzeTrackedForm id={app.id} profile={profile} /> : <NeedsProfile />}
+          {profile ? <AnalyzeTrackedForm id={app.id} profile={profile} initialText={app.jdText} /> : <NeedsProfile />}
         </Card>
       </div>
+
+      {app.jdText ? (
+        <Card>
+          <details>
+            <summary className="cursor-pointer font-medium">Job description you saved</summary>
+            <p className="mt-4 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-muted">
+              {app.jdText}
+            </p>
+          </details>
+        </Card>
+      ) : null}
 
       <section className="border-t border-line pt-8">
         <DeleteApplication id={app.id} />
@@ -192,7 +184,6 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             {app.stageUpdatedAt && app.stage !== "applied" && app.stage !== "not_applied" ? (
               <span>Updated {dateFormat.format(app.stageUpdatedAt)}</span>
             ) : null}
-            <JobLink url={app.jobUrl} />
           </div>
           {generated ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -344,7 +335,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
         </div>
       </div>
 
-      <DetailsCard id={app.id} jobUrl={app.jobUrl} notes={app.notes} />
+      <NotesCard id={app.id} notes={app.notes} />
 
       <section id="job" className="scroll-mt-24">
         <Card>

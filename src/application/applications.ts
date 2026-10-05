@@ -42,13 +42,6 @@ const SaveResumeInput = z.object({
 
 const CoverLetterInput = z.string().trim().min(1, "The cover letter is empty.").max(20_000);
 
-// Only http(s) links are kept, so a stored link can never run script when clicked.
-const JobUrl = z
-  .string()
-  .trim()
-  .max(2_000)
-  .refine((v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v), "That link doesn't look like a web address.")
-  .transform((v) => v || null);
 const Notes = z
   .string()
   .max(5_000)
@@ -57,7 +50,6 @@ const Notes = z
 const TrackInput = z.object({
   company: z.string().trim().min(1, "Add the company.").max(200),
   role: z.string().trim().min(1, "Add the role.").max(200),
-  jobUrl: JobUrl.optional(),
   location: z.string().trim().max(200).optional(),
   stage: StageSchema.default("applied"),
   // "YYYY-MM-DD" from a date input; today when left empty.
@@ -67,9 +59,11 @@ const TrackInput = z.object({
     .optional()
     .or(z.literal("")),
   notes: Notes.optional(),
+  // Optional: kept so "Analyze and tailor" can start from it later.
+  jdText: z.string().trim().max(MAX_JD_LENGTH, "That job description is too long.").optional(),
 });
 
-const DetailsInput = z.object({ jobUrl: JobUrl, notes: Notes });
+const NotesInput = z.object({ notes: Notes });
 
 export type ApplicationDeps = {
   userId: string;
@@ -103,7 +97,6 @@ export class ApplicationService {
       pdf: null,
       pdfCreatedAt: null,
       coverLetter: null,
-      jobUrl: null,
       notes: null,
       status: "questions",
       stage: "not_applied",
@@ -122,7 +115,7 @@ export class ApplicationService {
       userId: this.deps.userId,
       company: t.company,
       role: t.role,
-      jdText: "",
+      jdText: t.jdText ?? "",
       job: {
         company: t.company,
         role: t.role,
@@ -142,7 +135,6 @@ export class ApplicationService {
       pdf: null,
       pdfCreatedAt: null,
       coverLetter: null,
-      jobUrl: t.jobUrl ?? null,
       notes: t.notes ?? null,
       status: "tracked",
       stage: t.stage,
@@ -152,7 +144,7 @@ export class ApplicationService {
   }
 
   // Pasting the job description into a tracked job: the browser's analysis is checked
-  // like a new one, and the job keeps its stage, dates, link, notes and the names typed in.
+  // like a new one, and the job keeps its stage, dates, notes and the names typed in.
   async analyzeTracked(id: number, input: unknown): Promise<Application> {
     const { jdText, job, fit, questions } = NewApplicationInput.parse(withinSize(input));
     const app = await this.requireApplication(id);
@@ -168,11 +160,11 @@ export class ApplicationService {
     });
   }
 
-  // The posting link and the person's notes, on any application.
-  async saveDetails(id: number, input: unknown): Promise<Application> {
-    const details = DetailsInput.parse(withinSize(input));
+  // The person's notes, on any application.
+  async saveNotes(id: number, input: unknown): Promise<Application> {
+    const { notes } = NotesInput.parse(withinSize(input));
     await this.requireApplication(id);
-    return this.deps.applications.update(this.deps.userId, id, details);
+    return this.deps.applications.update(this.deps.userId, id, { notes });
   }
 
   // A new or revised resume. Revisions send no answers, so the earlier ones are kept.

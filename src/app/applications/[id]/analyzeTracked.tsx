@@ -7,11 +7,19 @@ import { FormMessage, PendingSteps, SubmitButton, TextArea } from "@/components/
 import { ANALYZE_NOTE, ANALYZE_STEPS } from "@/app/new/analyzeSteps";
 import { useAnalyze } from "@/app/new/useAnalyze";
 
-// Paste the job description of a tracked job to analyze it and tailor a resume.
+// Paste (or use the saved) job description of a tracked job to analyze it and tailor a resume.
 // It stays the same application, with its stage, dates, link and notes.
-export function AnalyzeTrackedForm({ id, profile }: { id: number; profile: Profile }) {
+export function AnalyzeTrackedForm({
+  id,
+  profile,
+  initialText,
+}: {
+  id: number;
+  profile: Profile;
+  initialText: string;
+}) {
   const { analyze, busy, step, error } = useAnalyze(profile, { trackedId: id });
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
 
   return (
     <RequireGeminiKey>

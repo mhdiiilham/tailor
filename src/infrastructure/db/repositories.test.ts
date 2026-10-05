@@ -47,7 +47,6 @@ const newApp = (userId: string): NewApplication => ({
   pdf: null,
   pdfCreatedAt: null,
   coverLetter: null,
-  jobUrl: null,
   notes: null,
   status: "questions",
   stage: "not_applied",
@@ -148,7 +147,7 @@ describe("listPage", () => {
   });
 
   it("lists a tracked job with no fit score", async () => {
-    await seed(1, () => ({ status: "tracked", fit: null, jobUrl: "https://example.com/job", notes: "Referral" }));
+    await seed(1, () => ({ status: "tracked", fit: null, notes: "Referral" }));
     const [item] = (await new DrizzleApplicationRepository(db).listPage("alice", firstPage)).items;
     expect(item).toMatchObject({ status: "tracked", score: null });
   });

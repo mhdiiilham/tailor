@@ -75,10 +75,10 @@ export async function analyzeTrackedApplication(id: number, analysis: unknown): 
   return {};
 }
 
-export async function saveApplicationDetails(id: number, input: unknown): Promise<ActionState> {
+export async function saveApplicationNotes(id: number, notes: unknown): Promise<ActionState> {
   const user = await requireUser();
   try {
-    await applicationServiceFor(user.id).saveDetails(id, input);
+    await applicationServiceFor(user.id).saveNotes(id, { notes });
   } catch (err) {
     return { error: describe(err) };
   }

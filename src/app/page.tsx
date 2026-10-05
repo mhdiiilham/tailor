@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, Suspense } from "react";
-import { ArrowRight, BookmarkSimple, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
 import { parseStageFilter, type StageFilter } from "@/domain/stage";
 import { getCurrentUser } from "@/infrastructure/auth/session";
@@ -11,6 +11,7 @@ import { loadRowPage } from "./dashboard/load";
 import { summarize } from "./dashboard/rows";
 import { ApplicationsTableSkeleton, StatusStripSkeleton } from "./dashboard/skeletons";
 import { StatusStrip } from "./dashboard/statusStrip";
+import { TrackJobButton } from "./dashboard/trackJob";
 import { Landing } from "./landing";
 import { SITE_DESCRIPTION, pageMetadata } from "./seo/site";
 import { NewApplicationForm } from "./new/form";
@@ -74,10 +75,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         description="Every job you tailored a resume for or are tracking, newest first."
         action={
           <div className="flex flex-wrap gap-2">
-            <ButtonLink variant="secondary" href="/track">
-              <BookmarkSimple size={16} />
-              Track a job
-            </ButtonLink>
+            <TrackJobButton />
             <ButtonLink href={profile ? "/new" : "/profile"}>
               <Plus size={16} weight="bold" />
               New application
