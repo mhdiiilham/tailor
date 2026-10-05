@@ -29,6 +29,13 @@
       "when": 1791133065149,
       "tag": "0003_cover_letter",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791185478116,
+      "tag": "0004_clear_oauth_tokens",
+      "breakpoints": true
     }
   ]
 }

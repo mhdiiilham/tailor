@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { isAllowed, parseAllowlist } from "@/domain/allowlist";
 import { getDb } from "@/infrastructure/db/instance";
 import * as schema from "@/infrastructure/db/schema";
+import { withoutOAuthTokens } from "./oauthTokens";
 
 export const allowlist = () => parseAllowlist(process.env.ALLOWED_EMAILS);
 
@@ -19,12 +20,18 @@ function createAuth() {
         prompt: "select_account",
       },
     },
+    // Google tokens are never needed after sign-in, so they're neither refreshed nor kept.
+    account: { updateAccountOnSignIn: false },
     databaseHooks: {
       user: {
         create: {
           // Only emails in ALLOWED_EMAILS (or anyone, with "*") get an account.
           before: async (user) => isAllowed(user.email, allowlist()),
         },
+      },
+      account: {
+        create: { before: async (account) => ({ data: withoutOAuthTokens(account) }) },
+        update: { before: async (account) => ({ data: withoutOAuthTokens(account) }) },
       },
     },
     plugins: [nextCookies()],

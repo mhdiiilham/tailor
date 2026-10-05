@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <ul>
           <li>
             <strong>Your Google account basics:</strong> name, email address, profile picture link and Google account
-            ID, plus the sign-in tokens Google returns. Used only to sign you in.
+            ID. Used only to sign you in.
           </li>
           <li>
             <strong>Session details:</strong> a session ID, its expiry, and the IP address and browser information of
@@ -68,6 +68,11 @@ export default function PrivacyPage() {
             <strong>Your Gemini API key.</strong> It stays in your browser, and Tailor’s server never receives it. Your
             browser sends it directly to Google’s Gemini API, and only the results (your job analysis, resume and cover
             letter) are sent to Tailor to be saved.
+          </li>
+          <li>
+            <strong>Your Google access tokens.</strong> Tailor only uses Google to confirm who you are and never acts on
+            your Google account, so the access, refresh and ID tokens Google returns at sign-in are discarded, not
+            saved.
           </li>
           <li>No analytics, no advertising, no tracking pixels, no data sold or shared for marketing.</li>
           <li>Tailor does not use your data to train AI models.</li>
