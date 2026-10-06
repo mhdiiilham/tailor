@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { HnJob } from "@/domain/hn";
 import type { Db } from "./client";
 import { DrizzleHnRepository } from "./hnRepository";
+import { user } from "./schema";
 import { openTestDb } from "./testDb";
 
 let db: Db;
@@ -94,5 +96,63 @@ describe("DrizzleHnRepository", () => {
     expect(await ids({ search: "kotlin" })).toEqual([201]);
     expect(await ids({ search: "apac" })).toEqual([200]);
     expect(await ids({ search: "post 3" })).toEqual([203]);
+  });
+});
+
+describe("saved posts", () => {
+  const september = {
+    id: 90,
+    title: "Ask HN: Who is hiring? (September 2026)",
+    postedAt: new Date("2026-09-01T15:00:00Z"),
+  };
+
+  beforeEach(async () => {
+    await db.insert(user).values([
+      { id: "alice", name: "alice", email: "alice@example.com" },
+      { id: "bob", name: "bob", email: "bob@example.com" },
+    ]);
+    await repo.saveThread(september);
+    await seed(3);
+    await repo.addPosts([
+      { id: 300, threadId: 90, author: "old", postedAt: new Date("2026-09-02T10:00:00Z"), text: "September post" },
+    ]);
+  });
+
+  it("saves and unsaves per user, saving twice being harmless", async () => {
+    await repo.savePost("alice", 201, at(10));
+    await repo.savePost("alice", 201, at(11));
+    await repo.savePost("alice", 300, at(12));
+    await repo.savePost("bob", 202, at(13));
+
+    expect((await repo.savedIds("alice", [200, 201, 202, 300])).sort()).toEqual([201, 300]);
+    expect(await repo.savedCount("alice")).toBe(2);
+    expect(await repo.savedIds("bob", [201])).toEqual([]);
+
+    await repo.unsavePost("alice", 201);
+    expect(await repo.savedIds("alice", [201, 300])).toEqual([300]);
+  });
+
+  it("lists saved posts across months, most recently saved first, with paging, filter and search", async () => {
+    await repo.savePost("alice", 300, at(10));
+    await repo.savePost("alice", 200, at(11));
+    await repo.savePost("alice", 202, at(12));
+    await repo.saveParsed([{ id: 200, job: job({ workMode: "remote", company: "UangAI" }) }], at(9));
+
+    const all = { workMode: "all" as const, search: "", limit: 2 };
+    const one = await repo.listSaved("alice", all);
+    expect(one.items.map((p) => p.id)).toEqual([202, 200]);
+    const two = await repo.listSaved("alice", { ...all, cursor: one.nextCursor! });
+    expect(two.items.map((p) => p.id)).toEqual([300]);
+    expect(two.nextCursor).toBeNull();
+
+    expect((await repo.listSaved("alice", { ...all, workMode: "remote" })).items.map((p) => p.id)).toEqual([200]);
+    expect((await repo.listSaved("alice", { ...all, search: "september" })).items.map((p) => p.id)).toEqual([300]);
+    expect((await repo.listSaved("bob", all)).items).toEqual([]);
+  });
+
+  it("goes away with the user's account", async () => {
+    await repo.savePost("alice", 201, at(10));
+    await db.delete(user).where(eq(user.id, "alice"));
+    expect(await repo.savedCount("alice")).toBe(0);
   });
 });

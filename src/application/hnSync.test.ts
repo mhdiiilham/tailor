@@ -61,6 +61,21 @@ class MemoryHn implements HnRepository {
   async findPost(): Promise<never> {
     throw new Error("not used");
   }
+  async savePost(): Promise<never> {
+    throw new Error("not used");
+  }
+  async unsavePost(): Promise<never> {
+    throw new Error("not used");
+  }
+  async savedIds(): Promise<never> {
+    throw new Error("not used");
+  }
+  async savedCount(): Promise<never> {
+    throw new Error("not used");
+  }
+  async listSaved(): Promise<never> {
+    throw new Error("not used");
+  }
 }
 
 const post = (id: number, text = `Acme | Engineer | REMOTE ${id}`): HnItem => ({

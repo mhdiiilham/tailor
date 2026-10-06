@@ -4,14 +4,20 @@ import { headers } from "next/headers";
 import { refresh } from "next/cache";
 import { ZodError } from "zod";
 import { NoProfileError, NotFoundError } from "@/application/applications";
-import { accountRepository, applicationRecords, applicationServiceFor, profileRepository } from "@/container";
+import {
+  accountRepository,
+  applicationRecords,
+  applicationServiceFor,
+  hnRepository,
+  profileRepository,
+} from "@/container";
 import { getAuth } from "@/infrastructure/auth/auth";
 import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 import { parseStageFilter, StageSchema } from "@/domain/stage";
 import { loadRowPage } from "./dashboard/load";
 import { loadHnPage } from "./hiring/load";
-import { parseWorkMode, type HnRowPage } from "./hiring/rows";
+import { parseWorkMode, type HnRowPage, type HnSource } from "./hiring/rows";
 import type { RowPage } from "./dashboard/rows";
 
 export type ActionState = { error?: string; notice?: string };
@@ -169,20 +175,36 @@ export async function saveCoverLetter(id: number, text: unknown): Promise<Action
 
 // "Load more" on the HN Who's Hiring page. Inputs come from the browser, so they're checked here.
 export async function loadHnPosts(input: {
-  threadId: unknown;
+  source: unknown;
   workMode: unknown;
   search: unknown;
   cursor: unknown;
 }): Promise<HnRowPage & ActionState> {
-  await requireUser();
-  const threadId = Number(input.threadId);
+  const user = await requireUser();
+  const threadId = Number(input.source);
+  const source: HnSource | null =
+    input.source === "saved" ? "saved" : Number.isInteger(threadId) && threadId > 0 ? threadId : null;
   const cursor = typeof input.cursor === "string" && input.cursor.length <= 500 ? input.cursor : null;
-  if (!Number.isInteger(threadId) || threadId < 1 || !cursor)
-    return { rows: [], nextCursor: null, error: "Invalid page." };
+  if (source === null || !cursor) return { rows: [], nextCursor: null, error: "Invalid page." };
   const search = typeof input.search === "string" ? input.search.slice(0, 200) : "";
   try {
-    return await loadHnPage(threadId, parseWorkMode(input.workMode), search, cursor);
+    return await loadHnPage(user.id, source, parseWorkMode(input.workMode), search, cursor);
   } catch (err) {
     return { rows: [], nextCursor: null, error: describe(err) };
   }
+}
+
+// Saves an HN post to the user's list, or removes it.
+export async function setHnPostSaved(postId: number, saved: boolean): Promise<ActionState> {
+  const user = await requireUser();
+  if (!Number.isInteger(postId) || postId < 1) return { error: "Unknown post." };
+  try {
+    const repo = hnRepository();
+    if (!(await repo.findPost(postId))) return { error: "That post no longer exists." };
+    if (saved) await repo.savePost(user.id, postId, new Date());
+    else await repo.unsavePost(user.id, postId);
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  return {};
 }

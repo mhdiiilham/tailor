@@ -1,10 +1,10 @@
-import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { HnJob, HnPost, HnPostPage, HnPostQuery } from "@/domain/hn";
 import type { HnRepository, HnThread } from "@/domain/ports";
 import type { Db } from "./client";
 import { containsPattern } from "./like";
-import { hnPosts, hnThreads } from "./schema";
+import { hnPosts, hnSaved, hnThreads } from "./schema";
 
 // Cursor for newest-first paging on (posted time, id), opaque to callers.
 const CursorSchema = z.object({ t: z.string().datetime(), i: z.number().int().positive() });
@@ -18,6 +18,35 @@ function decodeCursor(cursor: string) {
     throw new Error("Invalid page. Reload the list and try again.");
   }
 }
+
+// Work-mode filter and search, shared by a month's list and the saved list.
+function postFilters({ workMode, search }: Pick<HnPostQuery, "workMode" | "search">): SQL[] {
+  const where: SQL[] = [];
+  if (workMode !== "all") where.push(sql`${hnPosts.job}->>'workMode' = ${workMode}`);
+  const query = search.trim();
+  if (query) {
+    const pattern = containsPattern(query);
+    where.push(
+      or(
+        ilike(hnPosts.text, pattern),
+        sql`${hnPosts.job}->>'company' ilike ${pattern}`,
+        sql`${hnPosts.job}->>'role' ilike ${pattern}`,
+        sql`${hnPosts.job}->>'location' ilike ${pattern}`,
+        sql`(${hnPosts.job}->'techStack')::text ilike ${pattern}`,
+      )!,
+    );
+  }
+  return where;
+}
+
+const postColumns = {
+  id: hnPosts.id,
+  threadId: hnPosts.threadId,
+  author: hnPosts.author,
+  postedAt: hnPosts.postedAt,
+  text: hnPosts.text,
+  job: hnPosts.job,
+};
 
 export class DrizzleHnRepository implements HnRepository {
   constructor(private readonly db: Db) {}
@@ -75,35 +104,14 @@ export class DrizzleHnRepository implements HnRepository {
   }
 
   async listPosts(threadId: number, { workMode, search, cursor, limit }: HnPostQuery): Promise<HnPostPage> {
-    const where: SQL[] = [eq(hnPosts.threadId, threadId)];
-    if (workMode !== "all") where.push(sql`${hnPosts.job}->>'workMode' = ${workMode}`);
-    const query = search.trim();
-    if (query) {
-      const pattern = containsPattern(query);
-      where.push(
-        or(
-          ilike(hnPosts.text, pattern),
-          sql`${hnPosts.job}->>'company' ilike ${pattern}`,
-          sql`${hnPosts.job}->>'role' ilike ${pattern}`,
-          sql`${hnPosts.job}->>'location' ilike ${pattern}`,
-          sql`(${hnPosts.job}->'techStack')::text ilike ${pattern}`,
-        )!,
-      );
-    }
+    const where: SQL[] = [eq(hnPosts.threadId, threadId), ...postFilters({ workMode, search })];
     if (cursor) {
       const after = decodeCursor(cursor);
       where.push(sql`(${hnPosts.postedAt}, ${hnPosts.id}) < (${after.t}::timestamptz, ${after.i}::int)`);
     }
 
     const rows = await this.db
-      .select({
-        id: hnPosts.id,
-        threadId: hnPosts.threadId,
-        author: hnPosts.author,
-        postedAt: hnPosts.postedAt,
-        text: hnPosts.text,
-        job: hnPosts.job,
-      })
+      .select(postColumns)
       .from(hnPosts)
       .where(and(...where))
       .orderBy(desc(hnPosts.postedAt), desc(hnPosts.id))
@@ -114,17 +122,57 @@ export class DrizzleHnRepository implements HnRepository {
   }
 
   async findPost(id: number): Promise<HnPost | null> {
-    const [row] = await this.db
-      .select({
-        id: hnPosts.id,
-        threadId: hnPosts.threadId,
-        author: hnPosts.author,
-        postedAt: hnPosts.postedAt,
-        text: hnPosts.text,
-        job: hnPosts.job,
-      })
-      .from(hnPosts)
-      .where(eq(hnPosts.id, id));
+    const [row] = await this.db.select(postColumns).from(hnPosts).where(eq(hnPosts.id, id));
     return row ?? null;
+  }
+
+  async savePost(userId: string, postId: number, at: Date): Promise<void> {
+    await this.db.insert(hnSaved).values({ userId, postId, savedAt: at }).onConflictDoNothing();
+  }
+
+  async unsavePost(userId: string, postId: number): Promise<void> {
+    await this.db.delete(hnSaved).where(and(eq(hnSaved.userId, userId), eq(hnSaved.postId, postId)));
+  }
+
+  async savedIds(userId: string, postIds: number[]): Promise<number[]> {
+    if (postIds.length === 0) return [];
+    const rows = await this.db
+      .select({ id: hnSaved.postId })
+      .from(hnSaved)
+      .where(and(eq(hnSaved.userId, userId), inArray(hnSaved.postId, postIds)));
+    return rows.map((r) => r.id);
+  }
+
+  async savedCount(userId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(hnSaved)
+      .where(eq(hnSaved.userId, userId));
+    return row?.n ?? 0;
+  }
+
+  // Most recently saved first, from any month.
+  async listSaved(userId: string, { workMode, search, cursor, limit }: HnPostQuery): Promise<HnPostPage> {
+    const where: SQL[] = [eq(hnSaved.userId, userId), ...postFilters({ workMode, search })];
+    if (cursor) {
+      const after = decodeCursor(cursor);
+      where.push(sql`(${hnSaved.savedAt}, ${hnSaved.postId}) < (${after.t}::timestamptz, ${after.i}::int)`);
+    }
+
+    const rows = await this.db
+      .select({ ...postColumns, savedAt: hnSaved.savedAt })
+      .from(hnSaved)
+      .innerJoin(hnPosts, eq(hnPosts.id, hnSaved.postId))
+      .where(and(...where))
+      .orderBy(desc(hnSaved.savedAt), desc(hnSaved.postId))
+      .limit(limit + 1);
+
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      items: items.map(({ savedAt, ...post }) => post),
+      nextCursor: rows.length > limit ? encodeCursor({ postedAt: last.savedAt, id: last.id }) : null,
+    };
   }
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowSquareOut, MagicWand, MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowSquareOut, BookmarkSimple, MagicWand, MagnifyingGlass } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { loadHnPosts } from "@/app/actions";
+import { loadHnPosts, setHnPostSaved } from "@/app/actions";
 import { Badge, Button, ButtonLink, FormMessage, Select, type BadgeTone } from "@/components/ui";
 import { safeUrl, type WorkMode } from "@/domain/hn";
 import { splitLinks } from "@/domain/linkify";
-import type { HnPostRow, HnRowPage, WorkModeFilter } from "./rows";
+import type { HnPostRow, HnRowPage, HnSource, WorkModeFilter } from "./rows";
 
 const FILTERS: { value: WorkModeFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -27,6 +27,8 @@ const MODE_TONE: Record<WorkMode, BadgeTone> = {
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
 
 type Props = {
+  view: "all" | "saved";
+  savedCount: number;
   threadId: number;
   months: { id: number; label: string }[];
   latestId: number;
@@ -36,19 +38,21 @@ type Props = {
 };
 
 // Filter and search live in the URL, so the server renders the matching first page.
-export function HnPostList({ threadId, months, latestId, workMode, search, page }: Props) {
+export function HnPostList({ view, savedCount, threadId, months, latestId, workMode, search, page }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(search);
   const [updating, startUpdate] = useTransition();
   const typing = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function show(next: { mode?: WorkModeFilter; q?: string; thread?: number }) {
+  function show(next: { mode?: WorkModeFilter; q?: string; thread?: number; view?: "all" | "saved" }) {
     const params = new URLSearchParams();
+    const nextView = next.view ?? view;
+    if (nextView === "saved") params.set("view", "saved");
     const mode = next.mode ?? workMode;
     const q = (next.q ?? query).trim();
     const thread = next.thread ?? threadId;
-    if (thread !== latestId) params.set("thread", String(thread));
+    if (thread !== latestId && nextView === "all") params.set("thread", String(thread));
     if (mode !== "all") params.set("mode", mode);
     if (q) params.set("q", q);
     startUpdate(() => router.replace(params.size ? `${pathname}?${params}` : pathname, { scroll: false }));
@@ -61,16 +65,35 @@ export function HnPostList({ threadId, months, latestId, workMode, search, page 
     typing.current = setTimeout(() => show({ q: value }), 300);
   }
 
-  const pageKey = [
-    threadId,
-    workMode,
-    search,
-    page.nextCursor,
-    ...page.rows.map((r) => `${r.id}:${r.job ? 1 : 0}`),
-  ].join("|");
+  const source: HnSource = view === "saved" ? "saved" : threadId;
+  const pageKey = [source, workMode, search, page.nextCursor, ...page.rows.map((r) => `${r.id}:${r.job ? 1 : 0}`)].join(
+    "|",
+  );
 
   return (
     <section className="grid gap-4">
+      <div className="flex gap-1 border-b border-line text-sm" role="tablist" aria-label="Posts to show">
+        {(
+          [
+            ["all", "All posts"],
+            ["saved", "Saved"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={view === value}
+            onClick={() => show({ view: value })}
+            className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 ${
+              view === value ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+            {value === "saved" ? <span className="font-mono text-xs text-faint">{savedCount}</span> : null}
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter by work mode">
           {FILTERS.map((f) => (
@@ -92,7 +115,7 @@ export function HnPostList({ threadId, months, latestId, workMode, search, page 
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {/* Earlier months stay stored; the picker appears once there's more than one. */}
-          {months.length > 1 ? (
+          {view === "all" && months.length > 1 ? (
             <span className="w-full sm:w-44">
               <Select
                 aria-label="Month"
@@ -126,19 +149,19 @@ export function HnPostList({ threadId, months, latestId, workMode, search, page 
       </div>
 
       <div className={`transition-opacity ${updating ? "opacity-60" : ""}`} aria-busy={updating}>
-        <PagedPosts key={pageKey} threadId={threadId} first={page} workMode={workMode} search={search} />
+        <PagedPosts key={pageKey} source={source} first={page} workMode={workMode} search={search} />
       </div>
     </section>
   );
 }
 
 function PagedPosts({
-  threadId,
+  source,
   first,
   workMode,
   search,
 }: {
-  threadId: number;
+  source: HnSource;
   first: HnRowPage;
   workMode: WorkModeFilter;
   search: string;
@@ -151,7 +174,7 @@ function PagedPosts({
   function loadMore() {
     setError(undefined);
     startLoading(async () => {
-      const next = await loadHnPosts({ threadId, workMode, search, cursor });
+      const next = await loadHnPosts({ source, workMode, search, cursor });
       if (next.error) return setError(next.error);
       setRows((current) => [...current, ...next.rows.filter((r) => !current.some((c) => c.id === r.id))]);
       setCursor(next.nextCursor);
@@ -161,7 +184,9 @@ function PagedPosts({
   if (rows.length === 0) {
     return (
       <p className="rounded-card border border-line bg-raised px-6 py-10 text-center text-sm text-faint">
-        No posts match that.
+        {source === "saved" && !search && workMode === "all"
+          ? "Nothing saved yet. Use Save on any post to keep it here."
+          : "No posts match that."}
       </p>
     );
   }
@@ -273,6 +298,7 @@ function PostCard({ row }: { row: HnPostRow }) {
           View on HN
           <ArrowSquareOut size={12} />
         </a>
+        <SaveButton postId={row.id} initial={row.saved} />
         <span className="ml-auto font-mono text-xs text-faint">by {row.author}</span>
       </div>
     </li>
@@ -304,5 +330,41 @@ function OriginalPost({ text }: { text: string }) {
         </p>
       ))}
     </div>
+  );
+}
+
+// Saves the post to the user's list (or removes it), right away, undoing on failure.
+function SaveButton({ postId, initial }: { postId: number; initial: boolean }) {
+  const router = useRouter();
+  const [saved, setSaved] = useState(initial);
+  const [pending, startTransition] = useTransition();
+
+  function toggle() {
+    const next = !saved;
+    setSaved(next);
+    startTransition(async () => {
+      const result = await setHnPostSaved(postId, next);
+      if (result.error) {
+        setSaved(!next);
+        alert(result.error);
+      } else {
+        router.refresh(); // updates the Saved count
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      aria-pressed={saved}
+      className={`inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs transition-colors disabled:opacity-60 ${
+        saved ? "text-accent" : "text-muted hover:text-ink"
+      }`}
+    >
+      <BookmarkSimple size={14} weight={saved ? "fill" : "regular"} />
+      {saved ? "Saved" : "Save"}
+    </button>
   );
 }

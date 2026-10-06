@@ -12,13 +12,16 @@ export const metadata: Metadata = { title: "HN Who's Hiring" };
 export const dynamic = "force-dynamic";
 
 export default async function HiringPage({ searchParams }: PageProps<"/hiring">) {
-  await requireUser();
+  const user = await requireUser();
   // Every month's thread stays stored; ?thread= picks one, the latest by default.
   const threads = await hnRepository().listThreads();
   const params = await searchParams;
   const thread = threads.find((t) => String(t.id) === params.thread) ?? threads[0] ?? null;
   const workMode = parseWorkMode(params.mode);
   const search = typeof params.q === "string" ? params.q.slice(0, 200) : "";
+  // ?view=saved: the posts this user saved, from every month.
+  const view: "all" | "saved" = params.view === "saved" ? "saved" : "all";
+  const savedCount = await hnRepository().savedCount(user.id);
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -46,12 +49,14 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
       />
       {thread ? (
         <HnPostList
+          view={view}
+          savedCount={savedCount}
           threadId={thread.id}
           months={threads.map((t) => ({ id: t.id, label: threadMonth(t.title) }))}
           latestId={threads[0].id}
           workMode={workMode}
           search={search}
-          page={await loadHnPage(thread.id, workMode, search)}
+          page={await loadHnPage(user.id, view === "saved" ? "saved" : thread.id, workMode, search)}
         />
       ) : (
         <EmptyState title="No posts yet">

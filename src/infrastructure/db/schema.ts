@@ -1,4 +1,15 @@
-import { boolean, customType, index, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import type { FitAnalysis } from "@/domain/fit";
 import type { HnJob } from "@/domain/hn";
 import type { JobPosting } from "@/domain/job";
@@ -129,4 +140,19 @@ export const hnPosts = pgTable(
     parsedAt: ts("parsed_at"),
   },
   (t) => [index("hn_posts_thread_posted_idx").on(t.threadId, t.postedAt)],
+);
+
+// HN posts a user saved to look at later. Removed with the user's account.
+export const hnSaved = pgTable(
+  "hn_saved",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => hnPosts.id, { onDelete: "cascade" }),
+    savedAt: ts("saved_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index("hn_saved_user_saved_idx").on(t.userId, t.savedAt)],
 );

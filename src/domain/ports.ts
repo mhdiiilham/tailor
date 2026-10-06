@@ -66,6 +66,12 @@ export interface HnRepository {
   saveParsed(results: { id: number; job: HnJob }[], at: Date): Promise<void>;
   listPosts(threadId: number, query: HnPostQuery): Promise<HnPostPage>;
   findPost(id: number): Promise<HnPost | null>;
+  // Per-user bookmarks, across every month.
+  savePost(userId: string, postId: number, at: Date): Promise<void>;
+  unsavePost(userId: string, postId: number): Promise<void>;
+  savedIds(userId: string, postIds: number[]): Promise<number[]>;
+  savedCount(userId: string): Promise<number>;
+  listSaved(userId: string, query: HnPostQuery): Promise<HnPostPage>;
 }
 
 // Raw items from the Hacker News API (https://github.com/HackerNews/API).
