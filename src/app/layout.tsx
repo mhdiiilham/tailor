@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import { NavLinks } from "@/components/navLinks";
+import { MobileTabBar, NavLinks } from "@/components/navLinks";
 import { SUPPORT_URL, SupportButton } from "@/components/supportButton";
 import { UserMenu } from "@/components/userMenu";
 import { getCurrentUser } from "@/infrastructure/auth/session";
@@ -40,9 +40,9 @@ export const viewport: Viewport = {
   ],
 };
 
-// The wordmark already links home, so "Applications" is dropped on small screens to keep one line.
+// Shown in the header on wider screens and as a bottom tab bar on phones.
 const nav = [
-  { href: "/", label: "Applications", wide: true },
+  { href: "/", label: "Applications" },
   { href: "/new", label: "New" },
   { href: "/hiring", label: "HN Jobs" },
   { href: "/profile", label: "Profile" },
@@ -53,7 +53,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <body className="flex min-h-[100dvh] flex-col font-sans">
+      {/* On phones signed-in pages get bottom padding, so the tab bar never covers the footer. */}
+      <body
+        className={`flex min-h-[100dvh] flex-col font-sans ${user ? "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0" : ""}`}
+      >
         <header className="sticky top-0 z-10 border-b border-line bg-surface/85 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
             {/* The berry lockup is for light surfaces; the white one is for dark mode. */}
@@ -129,6 +132,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </footer>
         <SupportButton />
+        {user ? <MobileTabBar items={nav} /> : null}
       </body>
     </html>
   );

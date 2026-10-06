@@ -71,7 +71,7 @@ export function HnPostList({ view, savedCount, threadId, months, latestId, workM
   );
 
   return (
-    <section className="grid gap-4">
+    <section className="grid min-w-0 grid-cols-1 gap-4">
       <div className="flex gap-1 border-b border-line text-sm" role="tablist" aria-label="Posts to show">
         {(
           [
@@ -193,7 +193,7 @@ function PagedPosts({
 
   return (
     <div className="grid gap-4">
-      <ul className="grid gap-3">
+      <ul className="grid grid-cols-1 gap-3">
         {rows.map((row) => (
           <PostCard key={row.id} row={row} />
         ))}
@@ -220,7 +220,7 @@ function PostCard({ row }: { row: HnPostRow }) {
   const preview = titled ? row.text : rest.join("\n").trim();
 
   return (
-    <li className="grid gap-3 rounded-card border border-line bg-raised p-5">
+    <li className="grid min-w-0 grid-cols-1 gap-3 rounded-card border border-line bg-raised p-4 md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
           {job && titled ? (
@@ -229,7 +229,7 @@ function PostCard({ row }: { row: HnPostRow }) {
               <p className="text-sm text-muted">{job.company}</p>
             </>
           ) : (
-            <p className="font-medium">{firstLine.slice(0, 160)}</p>
+            <p className="[overflow-wrap:anywhere] font-medium">{firstLine.slice(0, 160)}</p>
           )}
         </div>
         <span className="font-mono text-xs text-faint">{dateFormat.format(new Date(row.postedAt))}</span>
@@ -255,7 +255,11 @@ function PostCard({ row }: { row: HnPostRow }) {
 
       <details className="group">
         <summary className="cursor-pointer list-none text-sm text-muted">
-          {preview ? <span className="line-clamp-3 whitespace-pre-line group-open:hidden">{preview}</span> : null}
+          {preview ? (
+            <span className="line-clamp-3 whitespace-pre-line [overflow-wrap:anywhere] group-open:hidden">
+              {preview}
+            </span>
+          ) : null}
           <span className="mt-1 inline-block text-accent group-open:hidden">Show original post</span>
           <span className="hidden text-accent group-open:inline">Hide original post</span>
         </summary>
@@ -311,7 +315,7 @@ function OriginalPost({ text }: { text: string }) {
   return (
     <div className="grid max-h-[560px] gap-3 overflow-y-auto pr-1 text-sm leading-relaxed text-ink">
       {text.split(/\n{2,}/).map((paragraph, i) => (
-        <p key={i} className="whitespace-pre-wrap break-words">
+        <p key={i} className="whitespace-pre-wrap [overflow-wrap:anywhere]">
           {splitLinks(paragraph).map((part, j) =>
             part.href ? (
               <a
