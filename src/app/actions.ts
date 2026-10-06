@@ -10,6 +10,8 @@ import { requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 import { parseStageFilter, StageSchema } from "@/domain/stage";
 import { loadRowPage } from "./dashboard/load";
+import { loadHnPage } from "./hiring/load";
+import { parseWorkMode, type HnRowPage } from "./hiring/rows";
 import type { RowPage } from "./dashboard/rows";
 
 export type ActionState = { error?: string; notice?: string };
@@ -163,4 +165,24 @@ export async function saveCoverLetter(id: number, text: unknown): Promise<Action
   }
   refresh();
   return {};
+}
+
+// "Load more" on the HN Who's Hiring page. Inputs come from the browser, so they're checked here.
+export async function loadHnPosts(input: {
+  threadId: unknown;
+  workMode: unknown;
+  search: unknown;
+  cursor: unknown;
+}): Promise<HnRowPage & ActionState> {
+  await requireUser();
+  const threadId = Number(input.threadId);
+  const cursor = typeof input.cursor === "string" && input.cursor.length <= 500 ? input.cursor : null;
+  if (!Number.isInteger(threadId) || threadId < 1 || !cursor)
+    return { rows: [], nextCursor: null, error: "Invalid page." };
+  const search = typeof input.search === "string" ? input.search.slice(0, 200) : "";
+  try {
+    return await loadHnPage(threadId, parseWorkMode(input.workMode), search, cursor);
+  } catch (err) {
+    return { rows: [], nextCursor: null, error: describe(err) };
+  }
 }

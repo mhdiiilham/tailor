@@ -1,5 +1,6 @@
-import { boolean, customType, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, customType, index, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import type { FitAnalysis } from "@/domain/fit";
+import type { HnJob } from "@/domain/hn";
 import type { JobPosting } from "@/domain/job";
 import type { Profile } from "@/domain/profile";
 import type { Answers, Question } from "@/domain/questions";
@@ -103,3 +104,29 @@ export const applications = pgTable("applications", {
   appliedAt: ts("applied_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
+
+// Hacker News "Who is hiring?" threads and their job posts. Public data, shared by all
+// users, filled by the hourly sync (application/hnSync.ts). Ids are HN's own item ids.
+export const hnThreads = pgTable("hn_threads", {
+  id: integer("id").primaryKey(),
+  title: text("title").notNull(),
+  postedAt: ts("posted_at").notNull(),
+  checkedAt: ts("checked_at"),
+});
+
+export const hnPosts = pgTable(
+  "hn_posts",
+  {
+    id: integer("id").primaryKey(),
+    threadId: integer("thread_id")
+      .notNull()
+      .references(() => hnThreads.id, { onDelete: "cascade" }),
+    author: text("author").notNull(),
+    postedAt: ts("posted_at").notNull(),
+    text: text("text").notNull(),
+    // What Gemini Flash-Lite extracted; null until parsed.
+    job: jsonb("job").$type<HnJob>(),
+    parsedAt: ts("parsed_at"),
+  },
+  (t) => [index("hn_posts_thread_posted_idx").on(t.threadId, t.postedAt)],
+);

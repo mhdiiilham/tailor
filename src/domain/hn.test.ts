@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import { hnText, isHiringThread, safeUrl } from "./hn";
+
+describe("hnText", () => {
+  it("turns HN comment HTML into plain text with paragraphs and full link targets", () => {
+    const html =
+      'Acme | Backend Engineer | REMOTE<p>We build <i>payments</i>. Apply: <a href="https:&#x2F;&#x2F;acme.com&#x2F;jobs&#x2F;123" rel="nofollow">https:&#x2F;&#x2F;acme.com&#x2F;jo...</a><p>Stack: Go &amp; Postgres, isn&#x27;t "legacy"';
+    expect(hnText(html)).toBe(
+      'Acme | Backend Engineer | REMOTE\n\nWe build payments. Apply: https://acme.com/jobs/123\n\nStack: Go & Postgres, isn\'t "legacy"',
+    );
+  });
+
+  it("keeps code blocks and drops any other markup", () => {
+    expect(hnText("Try:<p><pre><code>  go run .\n</code></pre><script>x</script>done")).toBe(
+      "Try:\n\n  go run .\nxdone",
+    );
+  });
+});
+
+describe("isHiringThread", () => {
+  it("matches the monthly hiring thread only", () => {
+    expect(isHiringThread("Ask HN: Who is hiring? (October 2026)")).toBe(true);
+    expect(isHiringThread("Ask HN: Who wants to be hired? (October 2026)")).toBe(false);
+    expect(isHiringThread("Ask HN: Freelancer? Seeking freelancer? (October 2026)")).toBe(false);
+  });
+});
+
+describe("safeUrl", () => {
+  it("keeps http(s) links and drops anything else", () => {
+    expect(safeUrl("https://acme.com/jobs")).toBe("https://acme.com/jobs");
+    expect(safeUrl("javascript:alert(1)")).toBe("");
+    expect(safeUrl("acme.com/jobs")).toBe("");
+    expect(safeUrl("")).toBe("");
+  });
+});

@@ -12,6 +12,7 @@ import type { AccountRepository, ApplicationRepository, ProfileRepository, Store
 import type { Profile } from "@/domain/profile";
 import { stagesFor, type Stage } from "@/domain/stage";
 import type { Db } from "./client";
+import { containsPattern } from "./like";
 import { applications, profiles, user } from "./schema";
 
 export class DrizzleProfileRepository implements ProfileRepository {
@@ -84,7 +85,7 @@ function decodeCursor(cursor: string): Cursor {
 // Case-insensitive match on role, company, location or any stack item. LIKE's own
 // wildcards are escaped, so "%" or "_" in a search only match themselves.
 function matchesSearch(query: string): SQL {
-  const pattern = `%${query.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const pattern = containsPattern(query);
   return or(
     ilike(applications.role, pattern),
     ilike(applications.company, pattern),

@@ -62,8 +62,11 @@ Copy `.env.example` to `.env` (Docker) or `.env.local` (local development) and f
 | `DATABASE_URL` | yes | Postgres connection string. Docker Compose sets it for you. |
 | `POSTGRES_PASSWORD` | Compose only | Password for the bundled Postgres in `docker-compose.yml`. |
 | `TYPST_BIN` | no | Path to the Typst binary. Default `typst`; already in the Docker image. |
+| `GEMINI_API_KEY` | no | Your own Gemini key, used only to parse public Hacker News "Who is hiring?" posts for the HN Jobs page (Gemini 2.5 Flash-Lite, about $0.02 a month, usually within the free tier). Without it, posts still show, just without company, role and tags. Users' keys are unrelated and never reach the server. |
+| `HN_HIRING_THREAD_ID` | no | Pins the HN thread to show, e.g. `49922569`. Leave empty to follow the latest "Who is hiring?" thread automatically every month. |
+| `HN_GEMINI_MODEL` | no | Model for parsing HN posts. Default `gemini-2.5-flash-lite`, the cheapest. |
 
-No Gemini key goes here. Users add their own in the app, and the server never receives it. The default models (`gemini-flash-lite-latest` for analysis, `gemini-flash-latest` for writing) are set in `src/infrastructure/llm/geminiLlm.ts`. Each person can pick other models in Settings, from the list Google returns for their key; the choice is kept in their browser.
+Users' Gemini keys don't go here (the optional `GEMINI_API_KEY` above is yours, for HN posts only). Users add their own in the app, and the server never receives it. The default models (`gemini-flash-lite-latest` for analysis, `gemini-flash-latest` for writing) are set in `src/infrastructure/llm/geminiLlm.ts`. Each person can pick other models in Settings, from the list Google returns for their key; the choice is kept in their browser.
 
 Never commit `.env` or put real values in `.env.example`.
 

@@ -89,13 +89,15 @@ export function NewApplicationWorkspace({
   profile,
   terms,
   profileCard,
+  initialText = "",
 }: {
   profile: Profile;
   terms: string[];
   profileCard: React.ReactNode;
+  initialText?: string;
 }) {
   const { analyze, busy, step, error } = useAnalyze(profile);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const form = useRef<HTMLFormElement>(null);
 
   return (

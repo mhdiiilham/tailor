@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { Application, ApplicationPage, ApplicationPageQuery, NewApplication, StageStats } from "./application";
+import type { HnJob, HnPost, HnPostPage, HnPostQuery } from "./hn";
 import type { Profile } from "./profile";
 import type { TailoredResume } from "./resume";
 
@@ -49,4 +50,37 @@ export interface ResumeRenderer {
   compile(typSource: string): Promise<Buffer>;
   // PNG images of each page, for showing the resume on screen.
   previewPages(typSource: string): Promise<Buffer[]>;
+}
+
+export type HnThread = { id: number; title: string; postedAt: Date };
+
+// The stored "Who is hiring?" threads and posts. Shared by all users (public HN data).
+export interface HnRepository {
+  saveThread(thread: HnThread): Promise<void>;
+  latestThread(): Promise<HnThread | null>;
+  markChecked(threadId: number, at: Date): Promise<void>;
+  postIds(threadId: number): Promise<number[]>;
+  addPosts(posts: Omit<HnPost, "job">[]): Promise<void>;
+  unparsed(limit: number): Promise<{ id: number; text: string }[]>;
+  saveParsed(results: { id: number; job: HnJob }[], at: Date): Promise<void>;
+  listPosts(threadId: number, query: HnPostQuery): Promise<HnPostPage>;
+  findPost(id: number): Promise<HnPost | null>;
+}
+
+// Raw items from the Hacker News API (https://github.com/HackerNews/API).
+export type HnItem = {
+  id: number;
+  type?: string;
+  by?: string;
+  time?: number;
+  title?: string;
+  text?: string;
+  kids?: number[];
+  deleted?: boolean;
+  dead?: boolean;
+};
+
+export interface HnClient {
+  item(id: number): Promise<HnItem | null>;
+  submissions(user: string): Promise<number[]>;
 }
