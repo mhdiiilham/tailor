@@ -1,9 +1,9 @@
 const PURGE_EVERY_MS = 15 * 60 * 1000;
-const HN_SYNC_EVERY_MS = 60 * 60 * 1000;
+const HN_SYNC_EVERY_MS = 3 * 60 * 60 * 1000;
 
 // Runs once when the server starts: apply database migrations, then delete stored
 // PDFs older than 24 hours (now and every 15 minutes), and sync the HN "Who is
-// hiring?" posts (now and every hour).
+// hiring?" posts (now and every 3 hours).
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const { getDb } = await import("@/infrastructure/db/instance");

@@ -37,10 +37,10 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
                 {thread.title.replace(/^Ask HN:\s*/i, "")}
                 <ArrowSquareOut size={13} />
               </a>
-              , checked for new posts every hour. Tailor a CV for any of them in one click.
+              , checked for new posts every 3 hours. Tailor a CV for any of them in one click.
             </>
           ) : (
-            'Job posts from Hacker News\' monthly "Who is hiring?" thread, checked every hour.'
+            'Job posts from Hacker News\' monthly "Who is hiring?" thread, checked every 3 hours.'
           )
         }
       />

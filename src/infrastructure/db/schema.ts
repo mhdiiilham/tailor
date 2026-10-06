@@ -106,7 +106,7 @@ export const applications = pgTable("applications", {
 });
 
 // Hacker News "Who is hiring?" threads and their job posts. Public data, shared by all
-// users, filled by the hourly sync (application/hnSync.ts). Ids are HN's own item ids.
+// users, filled by the sync every 3 hours (application/hnSync.ts). Ids are HN's own item ids.
 export const hnThreads = pgTable("hn_threads", {
   id: integer("id").primaryKey(),
   title: text("title").notNull(),
