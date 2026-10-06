@@ -239,16 +239,12 @@ function PostCard({ row }: { row: HnPostRow }) {
         {job && job.workMode !== "unknown" ? (
           <Badge tone={MODE_TONE[job.workMode]}>{MODE_LABEL[job.workMode]}</Badge>
         ) : null}
-        {job?.location ? (
-          <span className="flex min-w-0 max-w-72">
-            <Badge truncate>{job.location}</Badge>
-          </span>
-        ) : null}
-        {job?.salary ? <Badge mono>{job.salary}</Badge> : null}
+        {job?.location ? <FitBadge>{job.location}</FitBadge> : null}
+        {job?.salary ? <FitBadge mono>{job.salary}</FitBadge> : null}
         {job?.techStack.slice(0, 8).map((t) => (
-          <Badge key={t} mono>
+          <FitBadge key={t} mono>
             {t}
-          </Badge>
+          </FitBadge>
         ))}
         {!job ? <Badge tone="warn">Not parsed yet</Badge> : null}
       </div>
@@ -370,5 +366,18 @@ function SaveButton({ postId, initial }: { postId: number; initial: boolean }) {
       <BookmarkSimple size={14} weight={saved ? "fill" : "regular"} />
       {saved ? "Saved" : "Save"}
     </button>
+  );
+}
+
+// A badge that never gets wider than the card: Gemini sometimes copies a whole sentence
+// into a field (a salary note, a long location), and badges don't wrap. Anything too
+// long is cut with "…"; the full text shows on hover.
+function FitBadge({ mono = false, children }: { mono?: boolean; children: string }) {
+  return (
+    <span className="flex min-w-0 max-w-full sm:max-w-80">
+      <Badge mono={mono} truncate>
+        {children}
+      </Badge>
+    </span>
   );
 }
