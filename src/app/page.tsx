@@ -4,6 +4,7 @@ import { cache, Suspense } from "react";
 import { ArrowRight, Lightning, Plus } from "@phosphor-icons/react/dist/ssr";
 import { applicationRepository, profileRepository } from "@/container";
 import { parseStageFilter, type StageFilter } from "@/domain/stage";
+import { safeNext } from "@/domain/redirect";
 import { getCurrentUser } from "@/infrastructure/auth/session";
 import { ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui";
 import { ApplicationsTable } from "./dashboard/applicationsTable";
@@ -56,7 +57,11 @@ async function List({ userId, hasProfile, stage, search }: ListProps) {
 // the quick-paste box render right away; the list streams in behind skeletons.
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const user = await getCurrentUser();
-  if (!user) return <Landing error={(await searchParams).error as string | undefined} />;
+  if (!user) {
+    const params = await searchParams;
+    // ?next= comes from a "sign in to tailor/save" link; only a path on this site is kept.
+    return <Landing error={params.error as string | undefined} next={safeNext(params.next)} />;
+  }
 
   const profile = await profileRepository().findByUser(user.id);
   // Filters live in the URL (?stage=applied&q=go), so the first page renders on the server.

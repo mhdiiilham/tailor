@@ -174,7 +174,7 @@ function StructuredData() {
   );
 }
 
-export function Landing({ error }: { error?: string }) {
+export function Landing({ error, next }: { error?: string; next?: string }) {
   return (
     <div className="grid gap-24 md:gap-32">
       <StructuredData />
@@ -188,7 +188,7 @@ export function Landing({ error }: { error?: string }) {
         </p>
 
         <div className="grid w-full max-w-md gap-4 rounded-card border border-line bg-raised p-6 text-left">
-          <GoogleButton fullWidth />
+          <GoogleButton fullWidth next={next} />
           <a
             href="/sample-resume.pdf"
             target="_blank"

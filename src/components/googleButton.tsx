@@ -10,7 +10,8 @@ import { authClient } from "@/infrastructure/auth/authClient";
 const roboto = Roboto({ weight: "500", subsets: ["latin"] });
 
 // Sign-in is only possible after confirming age and accepting the terms.
-export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
+// `next` is where to land after signing in, already checked with safeNext.
+export function GoogleButton({ fullWidth = false, next = "/" }: { fullWidth?: boolean; next?: string }) {
   const [agreed, setAgreed] = useState(false);
   const [pending, setPending] = useState(false);
   return (
@@ -42,7 +43,7 @@ export function GoogleButton({ fullWidth = false }: { fullWidth?: boolean }) {
         disabled={!agreed || pending}
         onClick={async () => {
           setPending(true);
-          await authClient.signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/?error=access" });
+          await authClient.signIn.social({ provider: "google", callbackURL: next, errorCallbackURL: "/?error=access" });
         }}
         className={`${roboto.className} inline-flex h-11 items-center justify-center gap-2.5 rounded-full border border-[#8E918F] bg-[#131314] px-4 text-sm text-[#E3E3E3] transition-colors hover:bg-[#242425] active:bg-[#2c2c2d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#131314] ${fullWidth ? "w-full" : ""}`}
       >

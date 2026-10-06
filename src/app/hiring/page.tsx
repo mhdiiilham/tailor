@@ -3,16 +3,23 @@ import { ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
 import { hnRepository } from "@/container";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { threadMonth } from "@/domain/hn";
-import { requireUser } from "@/infrastructure/auth/session";
+import { getCurrentUser } from "@/infrastructure/auth/session";
+import { pageMetadata } from "@/app/seo/site";
 import { HnPostList } from "./list";
 import { loadHnPage } from "./load";
 import { parseWorkMode } from "./rows";
 
-export const metadata: Metadata = { title: "HN Who's Hiring" };
+export const metadata: Metadata = pageMetadata({
+  title: "HN Who's Hiring",
+  description:
+    'Job posts from Hacker News\' monthly "Who is hiring?" thread, searchable by role, location and stack, with a tailored CV one click away.',
+  path: "/hiring",
+});
 export const dynamic = "force-dynamic";
 
 export default async function HiringPage({ searchParams }: PageProps<"/hiring">) {
-  const user = await requireUser();
+  // Public: anyone can browse. Tailor CV, Save and the Saved tab need a signed-in user.
+  const user = await getCurrentUser();
   // Every month's thread stays stored; ?thread= picks one, the latest by default.
   const threads = await hnRepository().listThreads();
   const params = await searchParams;
@@ -20,8 +27,8 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
   const workMode = parseWorkMode(params.mode);
   const search = typeof params.q === "string" ? params.q.slice(0, 200) : "";
   // ?view=saved: the posts this user saved, from every month.
-  const view: "all" | "saved" = params.view === "saved" ? "saved" : "all";
-  const savedCount = await hnRepository().savedCount(user.id);
+  const view: "all" | "saved" = user && params.view === "saved" ? "saved" : "all";
+  const savedCount = user ? await hnRepository().savedCount(user.id) : 0;
 
   return (
     <div className="grid grid-cols-1 gap-8">
@@ -49,6 +56,7 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
       />
       {thread ? (
         <HnPostList
+          signedIn={Boolean(user)}
           view={view}
           savedCount={savedCount}
           threadId={thread.id}
@@ -56,7 +64,7 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
           latestId={threads[0].id}
           workMode={workMode}
           search={search}
-          page={await loadHnPage(user.id, view === "saved" ? "saved" : thread.id, workMode, search)}
+          page={await loadHnPage(user?.id ?? null, view === "saved" ? "saved" : thread.id, workMode, search)}
         />
       ) : (
         <EmptyState title="No posts yet">

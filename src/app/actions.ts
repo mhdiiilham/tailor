@@ -12,7 +12,7 @@ import {
   profileRepository,
 } from "@/container";
 import { getAuth } from "@/infrastructure/auth/auth";
-import { requireUser } from "@/infrastructure/auth/session";
+import { getCurrentUser, requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 import { parseStageFilter, StageSchema } from "@/domain/stage";
 import { loadRowPage } from "./dashboard/load";
@@ -180,15 +180,17 @@ export async function loadHnPosts(input: {
   search: unknown;
   cursor: unknown;
 }): Promise<HnRowPage & ActionState> {
-  const user = await requireUser();
+  // The page is public; only the saved list needs a signed-in user.
+  const user = await getCurrentUser();
   const threadId = Number(input.source);
   const source: HnSource | null =
     input.source === "saved" ? "saved" : Number.isInteger(threadId) && threadId > 0 ? threadId : null;
   const cursor = typeof input.cursor === "string" && input.cursor.length <= 500 ? input.cursor : null;
   if (source === null || !cursor) return { rows: [], nextCursor: null, error: "Invalid page." };
+  if (source === "saved" && !user) return { rows: [], nextCursor: null, error: "Sign in to see your saved posts." };
   const search = typeof input.search === "string" ? input.search.slice(0, 200) : "";
   try {
-    return await loadHnPage(user.id, source, parseWorkMode(input.workMode), search, cursor);
+    return await loadHnPage(user?.id ?? null, source, parseWorkMode(input.workMode), search, cursor);
   } catch (err) {
     return { rows: [], nextCursor: null, error: describe(err) };
   }

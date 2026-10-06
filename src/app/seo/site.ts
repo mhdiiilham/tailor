@@ -9,7 +9,7 @@ export const SITE_DESCRIPTION =
 export const SOURCE_URL = "https://github.com/mhdiiilham/tailor";
 
 // The only pages a signed-out visitor (or a crawler) can see.
-export const PUBLIC_PAGES = ["/", "/privacy", "/terms"] as const;
+export const PUBLIC_PAGES = ["/", "/hiring", "/privacy", "/terms"] as const;
 
 // Everything else needs a session, so it's kept out of search results.
 const PRIVATE_PATHS = ["/api/", "/applications/", "/new", "/profile", "/settings"];

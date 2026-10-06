@@ -4,8 +4,9 @@ import { HN_PAGE_SIZE, toHnRow, type HnRowPage, type HnSource, type WorkModeFilt
 
 // One page of posts, from a month's thread or from the user's saved posts, each marked
 // with whether this user saved it. Used by the page itself and by "Load more".
+// userId is null for signed-out visitors: they see posts but have nothing saved.
 export async function loadHnPage(
-  userId: string,
+  userId: string | null,
   source: HnSource,
   workMode: WorkModeFilter,
   search: string,
@@ -13,15 +14,13 @@ export async function loadHnPage(
 ): Promise<HnRowPage> {
   const repo = hnRepository();
   const query = { workMode, search, cursor, limit: HN_PAGE_SIZE };
-  const page = source === "saved" ? await repo.listSaved(userId, query) : await repo.listPosts(source, query);
-  const saved =
-    source === "saved"
-      ? new Set(page.items.map((p) => p.id))
-      : new Set(
-          await repo.savedIds(
-            userId,
-            page.items.map((p) => p.id),
-          ),
-        );
+  if (source === "saved") {
+    if (!userId) return { rows: [], nextCursor: null };
+    const page = await repo.listSaved(userId, query);
+    return { rows: page.items.map((p) => toHnRow(p, true)), nextCursor: page.nextCursor };
+  }
+  const page = await repo.listPosts(source, query);
+  const ids = page.items.map((p) => p.id);
+  const saved = new Set(userId ? await repo.savedIds(userId, ids) : []);
   return { rows: page.items.map((p) => toHnRow(p, saved.has(p.id))), nextCursor: page.nextCursor };
 }

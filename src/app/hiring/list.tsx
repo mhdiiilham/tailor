@@ -26,7 +26,11 @@ const MODE_TONE: Record<WorkMode, BadgeTone> = {
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
 
+// Sign in on the home page, then go on to `next`.
+const signInHref = (next: string) => `/?next=${encodeURIComponent(next)}#signin`;
+
 type Props = {
+  signedIn: boolean;
   view: "all" | "saved";
   savedCount: number;
   threadId: number;
@@ -38,7 +42,7 @@ type Props = {
 };
 
 // Filter and search live in the URL, so the server renders the matching first page.
-export function HnPostList({ view, savedCount, threadId, months, latestId, workMode, search, page }: Props) {
+export function HnPostList({ signedIn, view, savedCount, threadId, months, latestId, workMode, search, page }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(search);
@@ -84,13 +88,15 @@ export function HnPostList({ view, savedCount, threadId, months, latestId, workM
             type="button"
             role="tab"
             aria-selected={view === value}
-            onClick={() => show({ view: value })}
+            onClick={() =>
+              value === "saved" && !signedIn ? router.push(signInHref("/hiring?view=saved")) : show({ view: value })
+            }
             className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 ${
               view === value ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {label}
-            {value === "saved" ? <span className="font-mono text-xs text-faint">{savedCount}</span> : null}
+            {value === "saved" && signedIn ? <span className="font-mono text-xs text-faint">{savedCount}</span> : null}
           </button>
         ))}
       </div>
@@ -115,7 +121,7 @@ export function HnPostList({ view, savedCount, threadId, months, latestId, workM
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {/* Earlier months stay stored; the picker appears once there's more than one. */}
-          {view === "all" && months.length > 1 ? (
+          {view === "all" ? (
             <span className="w-full sm:w-44">
               <Select
                 aria-label="Month"
@@ -149,7 +155,14 @@ export function HnPostList({ view, savedCount, threadId, months, latestId, workM
       </div>
 
       <div className={`transition-opacity ${updating ? "opacity-60" : ""}`} aria-busy={updating}>
-        <PagedPosts key={pageKey} source={source} first={page} workMode={workMode} search={search} />
+        <PagedPosts
+          key={pageKey}
+          source={source}
+          first={page}
+          workMode={workMode}
+          search={search}
+          signedIn={signedIn}
+        />
       </div>
     </section>
   );
@@ -160,7 +173,9 @@ function PagedPosts({
   first,
   workMode,
   search,
+  signedIn,
 }: {
+  signedIn: boolean;
   source: HnSource;
   first: HnRowPage;
   workMode: WorkModeFilter;
@@ -195,7 +210,7 @@ function PagedPosts({
     <div className="grid gap-4">
       <ul className="grid grid-cols-1 gap-3">
         {rows.map((row) => (
-          <PostCard key={row.id} row={row} />
+          <PostCard key={row.id} row={row} signedIn={signedIn} />
         ))}
       </ul>
       <div className="grid justify-items-center gap-2">
@@ -211,7 +226,7 @@ function PagedPosts({
   );
 }
 
-function PostCard({ row }: { row: HnPostRow }) {
+function PostCard({ row, signedIn }: { row: HnPostRow; signedIn: boolean }) {
   const job = row.job;
   // Before parsing, the post's first line stands in for company and role.
   const [firstLine, ...rest] = row.text.split("\n");
@@ -274,7 +289,12 @@ function PostCard({ row }: { row: HnPostRow }) {
       </details>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
-        <ButtonLink size="sm" href={`/new?hn=${row.id}`}>
+        {/* Signed out, these lead to sign-in first, then on to the same place. */}
+        <ButtonLink
+          size="sm"
+          href={signedIn ? `/new?hn=${row.id}` : signInHref(`/new?hn=${row.id}`)}
+          title={signedIn ? undefined : "Sign in to tailor a CV for this job"}
+        >
           <MagicWand size={14} />
           Tailor CV
         </ButtonLink>
@@ -298,7 +318,18 @@ function PostCard({ row }: { row: HnPostRow }) {
           View on HN
           <ArrowSquareOut size={12} />
         </a>
-        <SaveButton postId={row.id} initial={row.saved} />
+        {signedIn ? (
+          <SaveButton postId={row.id} initial={row.saved} />
+        ) : (
+          <a
+            href={signInHref("/hiring")}
+            title="Sign in to save posts"
+            className="inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs text-muted hover:text-ink"
+          >
+            <BookmarkSimple size={14} />
+            Save
+          </a>
+        )}
         <span className="ml-auto font-mono text-xs text-faint">by {row.author}</span>
       </div>
     </li>
