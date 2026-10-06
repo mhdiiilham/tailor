@@ -4,7 +4,7 @@ import { ArrowSquareOut, MagicWand, MagnifyingGlass } from "@phosphor-icons/reac
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { loadHnPosts } from "@/app/actions";
-import { Badge, Button, ButtonLink, FormMessage, type BadgeTone } from "@/components/ui";
+import { Badge, Button, ButtonLink, FormMessage, Select, type BadgeTone } from "@/components/ui";
 import { safeUrl, type WorkMode } from "@/domain/hn";
 import { splitLinks } from "@/domain/linkify";
 import type { HnPostRow, HnRowPage, WorkModeFilter } from "./rows";
@@ -26,20 +26,29 @@ const MODE_TONE: Record<WorkMode, BadgeTone> = {
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
 
-type Props = { threadId: number; workMode: WorkModeFilter; search: string; page: HnRowPage };
+type Props = {
+  threadId: number;
+  months: { id: number; label: string }[];
+  latestId: number;
+  workMode: WorkModeFilter;
+  search: string;
+  page: HnRowPage;
+};
 
 // Filter and search live in the URL, so the server renders the matching first page.
-export function HnPostList({ threadId, workMode, search, page }: Props) {
+export function HnPostList({ threadId, months, latestId, workMode, search, page }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(search);
   const [updating, startUpdate] = useTransition();
   const typing = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  function show(next: { mode?: WorkModeFilter; q?: string }) {
+  function show(next: { mode?: WorkModeFilter; q?: string; thread?: number }) {
     const params = new URLSearchParams();
     const mode = next.mode ?? workMode;
     const q = (next.q ?? query).trim();
+    const thread = next.thread ?? threadId;
+    if (thread !== latestId) params.set("thread", String(thread));
     if (mode !== "all") params.set("mode", mode);
     if (q) params.set("q", q);
     startUpdate(() => router.replace(params.size ? `${pathname}?${params}` : pathname, { scroll: false }));
@@ -52,7 +61,13 @@ export function HnPostList({ threadId, workMode, search, page }: Props) {
     typing.current = setTimeout(() => show({ q: value }), 300);
   }
 
-  const pageKey = [workMode, search, page.nextCursor, ...page.rows.map((r) => `${r.id}:${r.job ? 1 : 0}`)].join("|");
+  const pageKey = [
+    threadId,
+    workMode,
+    search,
+    page.nextCursor,
+    ...page.rows.map((r) => `${r.id}:${r.job ? 1 : 0}`),
+  ].join("|");
 
   return (
     <section className="grid gap-4">
@@ -75,20 +90,39 @@ export function HnPostList({ threadId, workMode, search, page }: Props) {
             </button>
           ))}
         </div>
-        <label className="relative w-full sm:w-80">
-          <span className="sr-only">Search job posts</span>
-          <MagnifyingGlass
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => changeQuery(e.target.value)}
-            placeholder="Search company, role, location, stack"
-            className="h-10 w-full rounded-ui border border-line bg-sunken pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
-          />
-        </label>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {/* Earlier months stay stored; the picker appears once there's more than one. */}
+          {months.length > 1 ? (
+            <span className="w-full sm:w-44">
+              <Select
+                aria-label="Month"
+                value={threadId}
+                onChange={(e) => show({ thread: Number(e.target.value) })}
+                className="h-10 py-0 text-sm"
+              >
+                {months.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            </span>
+          ) : null}
+          <label className="relative w-full sm:w-80">
+            <span className="sr-only">Search job posts</span>
+            <MagnifyingGlass
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => changeQuery(e.target.value)}
+              placeholder="Search company, role, location, stack"
+              className="h-10 w-full rounded-ui border border-line bg-sunken pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft"
+            />
+          </label>
+        </div>
       </div>
 
       <div className={`transition-opacity ${updating ? "opacity-60" : ""}`} aria-busy={updating}>

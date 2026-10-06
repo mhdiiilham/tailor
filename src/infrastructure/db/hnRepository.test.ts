@@ -46,6 +46,16 @@ describe("DrizzleHnRepository", () => {
     expect((await repo.findPost(200))?.text).toBe("post 0");
   });
 
+  it("lists every stored thread, newest month first", async () => {
+    const september = {
+      id: 90,
+      title: "Ask HN: Who is hiring? (September 2026)",
+      postedAt: new Date("2026-09-01T15:00:00Z"),
+    };
+    await repo.saveThread(september);
+    expect(await repo.listThreads()).toEqual([thread, september]);
+  });
+
   it("hands out unparsed posts and stores parsed results", async () => {
     await seed(3);
     await repo.saveParsed([{ id: 201, job: job() }], at(9));

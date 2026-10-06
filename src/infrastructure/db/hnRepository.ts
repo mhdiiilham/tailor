@@ -38,6 +38,13 @@ export class DrizzleHnRepository implements HnRepository {
     return row ?? null;
   }
 
+  async listThreads(): Promise<HnThread[]> {
+    return this.db
+      .select({ id: hnThreads.id, title: hnThreads.title, postedAt: hnThreads.postedAt })
+      .from(hnThreads)
+      .orderBy(desc(hnThreads.postedAt));
+  }
+
   async markChecked(threadId: number, at: Date): Promise<void> {
     await this.db.update(hnThreads).set({ checkedAt: at }).where(eq(hnThreads.id, threadId));
   }

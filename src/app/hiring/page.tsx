@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
 import { hnRepository } from "@/container";
 import { EmptyState, PageHeader } from "@/components/ui";
+import { threadMonth } from "@/domain/hn";
 import { requireUser } from "@/infrastructure/auth/session";
 import { HnPostList } from "./list";
 import { loadHnPage } from "./load";
@@ -12,8 +13,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HiringPage({ searchParams }: PageProps<"/hiring">) {
   await requireUser();
-  const thread = await hnRepository().latestThread();
+  // Every month's thread stays stored; ?thread= picks one, the latest by default.
+  const threads = await hnRepository().listThreads();
   const params = await searchParams;
+  const thread = threads.find((t) => String(t.id) === params.thread) ?? threads[0] ?? null;
   const workMode = parseWorkMode(params.mode);
   const search = typeof params.q === "string" ? params.q.slice(0, 200) : "";
 
@@ -44,6 +47,8 @@ export default async function HiringPage({ searchParams }: PageProps<"/hiring">)
       {thread ? (
         <HnPostList
           threadId={thread.id}
+          months={threads.map((t) => ({ id: t.id, label: threadMonth(t.title) }))}
+          latestId={threads[0].id}
           workMode={workMode}
           search={search}
           page={await loadHnPage(thread.id, workMode, search)}

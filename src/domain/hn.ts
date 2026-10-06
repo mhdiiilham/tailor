@@ -35,6 +35,11 @@ export type HnPost = {
 export type HnPostQuery = { workMode: WorkMode | "all"; search: string; cursor?: string; limit: number };
 export type HnPostPage = { items: HnPost[]; nextCursor: string | null };
 
+// "Ask HN: Who is hiring? (October 2026)" -> "October 2026"; the title itself otherwise.
+export function threadMonth(title: string): string {
+  return /\(([^)]+)\)\s*$/.exec(title)?.[1] ?? title;
+}
+
 export function isHiringThread(title: string): boolean {
   return /^Ask HN: Who is hiring\?/i.test(title.trim());
 }

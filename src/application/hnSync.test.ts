@@ -37,6 +37,9 @@ class MemoryHn implements HnRepository {
   async latestThread() {
     return this.threads.at(-1) ?? null;
   }
+  async listThreads() {
+    return [...this.threads].reverse();
+  }
   async markChecked(id: number) {
     this.checked.push(id);
   }

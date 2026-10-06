@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hnText, isHiringThread, safeUrl } from "./hn";
+import { hnText, isHiringThread, safeUrl, threadMonth } from "./hn";
 
 describe("hnText", () => {
   it("turns HN comment HTML into plain text with paragraphs and full link targets", () => {
@@ -31,5 +31,12 @@ describe("safeUrl", () => {
     expect(safeUrl("javascript:alert(1)")).toBe("");
     expect(safeUrl("acme.com/jobs")).toBe("");
     expect(safeUrl("")).toBe("");
+  });
+});
+
+describe("threadMonth", () => {
+  it("takes the month from the thread title", () => {
+    expect(threadMonth("Ask HN: Who is hiring? (October 2026)")).toBe("October 2026");
+    expect(threadMonth("Ask HN: Who is hiring?")).toBe("Ask HN: Who is hiring?");
   });
 });

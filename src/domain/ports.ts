@@ -58,6 +58,7 @@ export type HnThread = { id: number; title: string; postedAt: Date };
 export interface HnRepository {
   saveThread(thread: HnThread): Promise<void>;
   latestThread(): Promise<HnThread | null>;
+  listThreads(): Promise<HnThread[]>;
   markChecked(threadId: number, at: Date): Promise<void>;
   postIds(threadId: number): Promise<number[]>;
   addPosts(posts: Omit<HnPost, "job">[]): Promise<void>;
