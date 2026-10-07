@@ -4,6 +4,7 @@ import { Key } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useGeminiKey } from "@/components/geminiKey";
 import { formatCount, useGeminiUsage } from "@/components/geminiUsage";
+import { useOllamaConfig } from "@/components/ollamaConfig";
 import { dayTotal, usageDay } from "@/domain/usage";
 
 // Facts only: whether this browser has a key, and numbers from your own applications.
@@ -11,15 +12,22 @@ type Props = { total: number; averageFit: number | null; applied: number; interv
 
 export function StatusStrip({ total, averageFit, applied, interviewing, offers }: Props) {
   const key = useGeminiKey();
+  const ollama = useOllamaConfig();
   const usage = useGeminiUsage();
   const today = usage ? dayTotal(usage, usageDay(new Date())) : null;
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-card border border-line bg-raised px-5 py-3 font-mono text-xs text-muted">
       <Link href="/settings" className="inline-flex items-center gap-2 hover:text-ink">
-        <Key size={14} className={key ? "text-good" : "text-warn"} />
-        {key === null ? "Checking key..." : key ? `Gemini key (…${key.slice(-4)})` : "No Gemini key in this browser"}
+        <Key size={14} className={key || ollama?.enabled ? "text-good" : "text-warn"} />
+        {key === null || ollama === null
+          ? "Checking key..."
+          : ollama.enabled
+            ? `Local Ollama (${ollama.models.write})`
+            : key
+              ? `Gemini key (…${key.slice(-4)})`
+              : "No Gemini key in this browser"}
       </Link>
-      {key && today ? (
+      {key && !ollama?.enabled && today ? (
         <Link
           href="/settings#usage"
           className="hover:text-ink"

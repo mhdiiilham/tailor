@@ -5,6 +5,7 @@ import { DeleteAccount } from "./deleteAccount";
 import { GeminiKeySettings } from "./geminiKeySettings";
 import { GeminiModelSettings } from "./geminiModelSettings";
 import { GeminiUsageCard } from "./geminiUsage";
+import { OllamaSettings } from "./ollamaSettings";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -15,6 +16,7 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
       <GeminiModelSettings />
+      <OllamaSettings />
       <GeminiUsageCard />
       <DeleteAccount />
     </div>
