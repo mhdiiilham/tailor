@@ -58,8 +58,8 @@ export function OllamaSettings() {
       {config === null ? (
         <Skeleton className="h-24" />
       ) : (
-        <div className="grid gap-5 border-t border-line pt-5 sm:pl-12">
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
+        <div className="grid gap-5 border-t border-line pt-5">
+          <label className="flex cursor-pointer items-start gap-3 rounded-ui border border-line bg-sunken p-4 text-sm">
             <input
               type="checkbox"
               checked={config.enabled}
@@ -78,7 +78,10 @@ export function OllamaSettings() {
           {config.enabled ? (
             <>
               {TIERS.map(({ tier, label }) => (
-                <div key={tier} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-6">
+                <div
+                  key={tier}
+                  className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-6"
+                >
                   <label htmlFor={`ollama-${tier}`} className="text-sm font-medium">
                     {label}
                   </label>
