@@ -84,6 +84,7 @@ const FILTERS: { value: StageFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "not_applied", label: "Not applied" },
   { value: "applied", label: "Applied" },
+  { value: "technical_assessment", label: "Technical assessment" },
   { value: "interviewing", label: "Interviewing" },
   { value: "offer", label: "Offer" },
   { value: "closed", label: "Closed" },

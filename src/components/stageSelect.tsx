@@ -9,6 +9,7 @@ import { STAGE_LABELS, STAGES, type Stage } from "@/domain/stage";
 const STAGE_STYLES: Record<Stage, string> = {
   not_applied: "border-line bg-sunken text-muted",
   applied: "border-accent/30 bg-accent-soft text-accent",
+  technical_assessment: "border-accent/40 bg-accent-soft text-accent",
   interviewing: "border-accent/40 bg-accent-soft text-accent",
   offer: "border-good/40 bg-good-soft text-good",
   rejected: "border-danger/30 bg-danger-soft text-danger",

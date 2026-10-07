@@ -218,7 +218,7 @@ Schema changes: edit `src/infrastructure/db/schema.ts`, then `npm run db:generat
 3. **Questions.** Two fixed questions, plus two to four about your gaps.
 4. **Resume.** Gemini returns structured JSON that points at your roles and projects by index. `src/infrastructure/typst/typstResume.ts` turns it into Typst and compiles a PDF, so titles, companies and dates always come from your profile. Banned buzzwords trigger one rewrite, and em dashes are removed.
 5. **Cover letter (optional).** Gemini drafts three or four paragraphs from the resume, your answers and your voice sample, a second pass rewrites it to remove AI-sounding patterns, and a final check catches leftover clichés. It's stored and shown as plain text to copy.
-6. **Track it.** Set the stage (Not applied, Applied, Interviewing, Offer, Rejected, Withdrawn); the applied date is recorded automatically.
+6. **Track it.** Set the stage (Not applied, Applied, Technical assessment, Interviewing, Offer, Rejected, Withdrawn); the applied date is recorded automatically.
 
 **Where it runs:** every Gemini call (steps 2 to 5) runs in the browser with the user's key, using the workflows in `src/application/workflows.ts`. Only the results go to the server, which validates them again (schemas, the fit score recomputed, roles checked against the stored profile), builds the Typst source itself and saves. The Content Security Policy only lets the page connect to the app and `generativelanguage.googleapis.com`.
 
