@@ -7,7 +7,7 @@ const isPublic = (path: string) => PUBLIC_PATHS.includes(path) || path.startsWit
 
 // A fresh nonce per request lets Next's own inline scripts run while blocking
 // anything injected. That matters because the Gemini key sits in this browser, and
-// connect-src means the page can only talk to Tailor itself and Google's Gemini API.
+// connect-src means the page can only talk to Tailor itself, Google's Gemini API and local Ollama.
 function contentSecurityPolicy(nonce: string): string {
   const dev = process.env.NODE_ENV === "development";
   return [
@@ -16,8 +16,8 @@ function contentSecurityPolicy(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data: https://lh3.googleusercontent.com",
     "font-src 'self'",
-    // The browser calls Gemini directly with the user's key; nothing else may be contacted.
-    "connect-src 'self' https://generativelanguage.googleapis.com",
+    // The browser calls Gemini directly with the user's key, or Ollama on this same machine; nothing else may be contacted.
+    "connect-src 'self' https://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*",
     "frame-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

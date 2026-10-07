@@ -7,31 +7,35 @@ import { MissingApiKeyError } from "@/domain/errors";
 import type { LlmPort } from "@/domain/ports";
 import { describeAiFailure } from "@/infrastructure/llm/geminiErrors";
 import { GeminiLlm } from "@/infrastructure/llm/geminiLlm";
+import { OllamaLlm } from "@/infrastructure/llm/ollamaLlm";
 import { useGeminiKey } from "./geminiKey";
 import { readGeminiModels } from "./geminiModels";
 import { recordGeminiCall } from "./geminiUsage";
+import { readOllamaConfig } from "./ollamaConfig";
 
 export type AiTaskState = { running: boolean; step: number; error?: string; notice?: string };
 
 type Task = (llm: LlmPort, onStep: OnStep) => Promise<ActionState | void>;
 
-// Runs one AI use case in the browser: the Gemini calls go straight from here to Google
-// with the key kept in this browser, then only the results go to a save action.
-// Tailor's server never receives the key.
+// Runs one AI use case in the browser: the calls go straight from here to Google (with the
+// key kept in this browser) or to Ollama on this machine, then only the results go to a
+// save action. Tailor's server never receives the key.
 export function useAiTask() {
   const key = useGeminiKey();
   const [state, setState] = useState<AiTaskState>({ running: false, step: 0 });
 
   async function run(task: Task, notice?: string): Promise<boolean> {
-    if (!key) {
+    const ollama = readOllamaConfig();
+    if (!ollama.enabled && !key) {
       setState({ running: false, step: 0, error: new MissingApiKeyError().message });
       return false;
     }
     setState({ running: true, step: 0 });
     try {
-      const result = await task(new GeminiLlm(key, { models: readGeminiModels(), onUsage: recordGeminiCall }), (step) =>
-        setState((s) => ({ ...s, step })),
-      );
+      const llm = ollama.enabled
+        ? new OllamaLlm(ollama)
+        : new GeminiLlm(key ?? "",{ models: readGeminiModels(), onUsage: recordGeminiCall });
+      const result = await task(llm, (step) => setState((s) => ({ ...s, step })));
       if (result?.error) {
         setState({ running: false, step: 0, error: result.error });
         return false;
@@ -39,7 +43,7 @@ export function useAiTask() {
       setState({ running: false, step: 0, notice });
       return true;
     } catch (err) {
-      setState({ running: false, step: 0, error: describeAiFailure(err, key) });
+      setState({ running: false, step: 0, error: describeAiFailure(err, key ?? undefined) });
       return false;
     }
   }

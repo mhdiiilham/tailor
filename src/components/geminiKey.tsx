@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { clearKey, KEY_NAME, readKey, writeKey, type KeyStores } from "./keyStorage";
+import { useOllamaConfig } from "./ollamaConfig";
 import { EmptyState } from "./ui";
 
 // The Gemini key lives only in this browser and is sent only to Google: the AI steps
@@ -63,8 +64,9 @@ export function useKeyRemembered(): boolean | null {
 // Shows the form only when this browser has a key.
 export function RequireGeminiKey({ children }: { children: ReactNode }) {
   const key = useGeminiKey();
-  if (key === null) return <div className="h-40 animate-pulse rounded-ui bg-raised" aria-hidden />;
-  if (!key) {
+  const ollama = useOllamaConfig();
+  if (key === null || ollama === null) return <div className="h-40 animate-pulse rounded-ui bg-raised" aria-hidden />;
+  if (!key && !ollama.enabled) {
     return (
       <EmptyState
         title="Add your Gemini API key first"
