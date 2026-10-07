@@ -27,9 +27,17 @@ describe("ogCard", () => {
     expect(ogCard(post())).toEqual({
       title: "Senior Backend Engineer",
       company: "Manifest",
-      facts: ["Remote", "REMOTE (US)", "$150K-$210K + equity"],
+      facts: ["REMOTE (US)", "$150K-$210K + equity"],
       stack: ["TypeScript", "Go", "Python", "MongoDB", "Kubernetes", "Terraform"],
     });
+  });
+
+  it("keeps the work mode when the location doesn't already say it", () => {
+    expect(ogCard(post({ job: { ...job, location: "Berlin" } })).facts).toEqual([
+      "Remote",
+      "Berlin",
+      "$150K-$210K + equity",
+    ]);
   });
 
   it("leaves out what the post doesn't say", () => {
