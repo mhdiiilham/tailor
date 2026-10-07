@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     <div className="mx-auto grid w-full max-w-4xl gap-6">
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
-      <div className="grid items-stretch gap-6 md:grid-cols-2">
+      <div className="grid items-start gap-6 md:grid-cols-2">
         <GeminiModelSettings />
         <KeySafetyCard />
       </div>

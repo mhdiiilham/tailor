@@ -3,6 +3,7 @@
 import {
   ArrowSquareOut,
   Broadcast,
+  CaretDown,
   Check,
   CheckCircle,
   FloppyDisk,
@@ -221,6 +222,7 @@ export function GeminiKeySettings() {
 
 // Optional hardening steps for the key, shown next to the models.
 export function KeySafetyCard() {
+  const [open, setOpen] = useState(false);
   return (
     <Card>
       <SectionHeader
@@ -228,38 +230,52 @@ export function KeySafetyCard() {
         title="Keep your key safe"
         description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
       />
-      <ol className="grid gap-3 border-t border-line pt-5">
-        {SAFETY_STEPS.map((step, i) => (
-          <li
-            key={step.title}
-            className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
-          >
-            <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
-              {i + 1}
-            </span>
-            <span className="grid gap-0.5">
-              <span className="text-sm font-medium">{step.title}</span>
-              <span className="text-sm leading-relaxed text-muted">{step.body}</span>
-            </span>
-            <a
-              href={step.link}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
-            >
-              {step.label}
-              <ArrowSquareOut size={13} />
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="key-safety-steps"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 justify-self-start text-sm text-accent hover:underline"
+      >
+        {open ? "Show less" : "Read more"}
+        <CaretDown size={14} className={open ? "rotate-180" : ""} />
+      </button>
+      {open ? (
+        <div id="key-safety-steps" className="grid gap-4">
+          <ol className="grid gap-3 border-t border-line pt-5">
+            {SAFETY_STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+              >
+                <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
+                  {i + 1}
+                </span>
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-sm leading-relaxed text-muted">{step.body}</span>
+                </span>
+                <a
+                  href={step.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
+                >
+                  {step.label}
+                  <ArrowSquareOut size={13} />
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p className="border-t border-line pt-4 text-sm text-faint">
+            <Question size={15} className="mr-2 inline align-[-2px]" />
+            New to Gemini keys?{" "}
+            <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
+              Google’s guide to getting one
             </a>
-          </li>
-        ))}
-      </ol>
-      <p className="border-t border-line pt-4 text-sm text-faint">
-        <Question size={15} className="mr-2 inline align-[-2px]" />
-        New to Gemini keys?{" "}
-        <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
-          Google’s guide to getting one
-        </a>
-      </p>
+          </p>
+        </div>
+      ) : null}
     </Card>
   );
 }
