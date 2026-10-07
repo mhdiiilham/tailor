@@ -133,130 +133,133 @@ export function GeminiKeySettings() {
         </p>
       </Card>
 
-      <div className="grid items-stretch gap-6 md:grid-cols-2">
-        <Card>
-          <SectionHeader
-            icon={<Key size={18} />}
-            title="Gemini API key"
-            description={status(saved, remembered)}
-            aside={
-              verified ? (
-                <Badge tone="good">
-                  <CheckCircle size={13} weight="fill" />
-                  Verified just now
-                </Badge>
-              ) : null
-            }
-          />
+      <Card>
+        <SectionHeader
+          icon={<Key size={18} />}
+          title="Gemini API key"
+          description={status(saved, remembered)}
+          aside={
+            verified ? (
+              <Badge tone="good">
+                <CheckCircle size={13} weight="fill" />
+                Verified just now
+              </Badge>
+            ) : null
+          }
+        />
 
-          <form onSubmit={save} className="grid gap-4 border-t border-line pt-5">
-            <Field
-              label={
-                <span className="flex items-center justify-between gap-3">
-                  {saved ? "Replace key" : "Your key"}
-                  {saved || draft.trim() ? (
-                    <button
-                      type="button"
-                      onClick={testConnection}
-                      disabled={testing}
-                      className="inline-flex items-center gap-1.5 text-xs font-normal text-accent hover:underline disabled:opacity-60"
-                    >
-                      <Broadcast size={13} />
-                      {testing ? "Testing..." : "Test connection"}
-                    </button>
-                  ) : null}
-                </span>
-              }
-              htmlFor="gemini-key"
-              hint="Checked with one tiny request from this browser to Google, then kept only here."
-            >
-              <SecretInput
-                id="gemini-key"
-                autoComplete="off"
-                spellCheck={false}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-            </Field>
-
-            <label className="flex cursor-pointer items-start gap-3 text-sm">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => changeRemember(e.target.checked)}
-                className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--accent)]"
-              />
-              <span className="grid gap-0.5">
-                <span className="font-medium">Remember on this device</span>
-                <span className="text-faint">
-                  Turn this off on a shared computer. The key is then forgotten when you close the tab.
-                </span>
+        <form onSubmit={save} className="grid gap-4 border-t border-line pt-5">
+          <Field
+            label={
+              <span className="flex items-center justify-between gap-3">
+                {saved ? "Replace key" : "Your key"}
+                {saved || draft.trim() ? (
+                  <button
+                    type="button"
+                    onClick={testConnection}
+                    disabled={testing}
+                    className="inline-flex items-center gap-1.5 text-xs font-normal text-accent hover:underline disabled:opacity-60"
+                  >
+                    <Broadcast size={13} />
+                    {testing ? "Testing..." : "Test connection"}
+                  </button>
+                ) : null}
               </span>
-            </label>
+            }
+            htmlFor="gemini-key"
+            hint="Checked with one tiny request from this browser to Google, then kept only here."
+          >
+            <SecretInput
+              id="gemini-key"
+              autoComplete="off"
+              spellCheck={false}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          </Field>
 
-            <FormMessage {...state} />
-            <div className="flex flex-wrap gap-3 border-t border-line pt-5">
-              <Button type="submit" disabled={pending || !draft.trim()}>
-                <FloppyDisk size={16} />
-                {pending ? "Checking..." : "Save key"}
-              </Button>
-              {saved ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setGeminiKey("");
-                    setVerified(false);
-                    setState({ notice: "Removed from this browser." });
-                  }}
-                >
-                  <Trash size={16} />
-                  Remove
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        </Card>
+          <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => changeRemember(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--accent)]"
+            />
+            <span className="grid gap-0.5">
+              <span className="font-medium">Remember on this device</span>
+              <span className="text-faint">
+                Turn this off on a shared computer. The key is then forgotten when you close the tab.
+              </span>
+            </span>
+          </label>
 
-        <Card>
-          <SectionHeader
-            icon={<Shield size={18} />}
-            title="Keep your key safe"
-            description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
-          />
-          <ol className="grid gap-3 border-t border-line pt-5">
-            {SAFETY_STEPS.map((step, i) => (
-              <li
-                key={step.title}
-                className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+          <FormMessage {...state} />
+          <div className="flex flex-wrap gap-3 border-t border-line pt-5">
+            <Button type="submit" disabled={pending || !draft.trim()}>
+              <FloppyDisk size={16} />
+              {pending ? "Checking..." : "Save key"}
+            </Button>
+            {saved ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setGeminiKey("");
+                  setVerified(false);
+                  setState({ notice: "Removed from this browser." });
+                }}
               >
-                <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
-                  {i + 1}
-                </span>
-                <span className="grid gap-0.5">
-                  <span className="text-sm font-medium">{step.title}</span>
-                  <span className="text-sm leading-relaxed text-muted">{step.body}</span>
-                </span>
-                <a
-                  href={step.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
-                >
-                  {step.label}
-                  <ArrowSquareOut size={13} />
-                </a>
-              </li>
-            ))}
-          </ol>
-          <p className="border-t border-line pt-4 text-sm text-faint">
-            <Question size={15} className="mr-2 inline align-[-2px]" />
-            New to Gemini keys?{" "}
-            <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
-              Google’s guide to getting one
-            </a>
-          </p>
-        </Card>
-      </div>
+                <Trash size={16} />
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </Card>
     </>
+  );
+}
+
+// Optional hardening steps for the key, shown next to the models.
+export function KeySafetyCard() {
+  return (
+    <Card>
+      <SectionHeader
+        icon={<Shield size={18} />}
+        title="Keep your key safe"
+        description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
+      />
+      <ol className="grid gap-3 border-t border-line pt-5">
+        {SAFETY_STEPS.map((step, i) => (
+          <li
+            key={step.title}
+            className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+          >
+            <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
+              {i + 1}
+            </span>
+            <span className="grid gap-0.5">
+              <span className="text-sm font-medium">{step.title}</span>
+              <span className="text-sm leading-relaxed text-muted">{step.body}</span>
+            </span>
+            <a
+              href={step.link}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
+            >
+              {step.label}
+              <ArrowSquareOut size={13} />
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p className="border-t border-line pt-4 text-sm text-faint">
+        <Question size={15} className="mr-2 inline align-[-2px]" />
+        New to Gemini keys?{" "}
+        <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
+          Google’s guide to getting one
+        </a>
+      </p>
+    </Card>
   );
 }

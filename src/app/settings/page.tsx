@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui";
 import { requireUser } from "@/infrastructure/auth/session";
 import { DeleteAccount } from "./deleteAccount";
-import { GeminiKeySettings } from "./geminiKeySettings";
+import { GeminiKeySettings, KeySafetyCard } from "./geminiKeySettings";
 import { GeminiModelSettings } from "./geminiModelSettings";
 import { GeminiUsageCard } from "./geminiUsage";
 import { OllamaSettings } from "./ollamaSettings";
@@ -15,7 +15,10 @@ export default async function SettingsPage() {
     <div className="mx-auto grid w-full max-w-4xl gap-6">
       <PageHeader title="Settings" description={`Signed in as ${user.email}.`} />
       <GeminiKeySettings />
-      <GeminiModelSettings />
+      <div className="grid items-stretch gap-6 md:grid-cols-2">
+        <GeminiModelSettings />
+        <KeySafetyCard />
+      </div>
       <OllamaSettings />
       <GeminiUsageCard />
       <DeleteAccount />
