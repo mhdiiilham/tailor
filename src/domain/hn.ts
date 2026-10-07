@@ -74,3 +74,13 @@ export function hnText(html: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+// A post id from a URL: digits only, so "12abc", "1e3" or " 12" never reach the database.
+export function parseHnPostId(raw: string): number | null {
+  if (!/^\d+$/.test(raw)) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// Where one post can be opened and shared.
+export const hnPostPath = (id: number): string => `/hiring/${id}`;

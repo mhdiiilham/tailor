@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hnText, isHiringThread, safeUrl, threadMonth } from "./hn";
+import { hnPostPath, hnText, isHiringThread, parseHnPostId, safeUrl, threadMonth } from "./hn";
 
 describe("hnText", () => {
   it("turns HN comment HTML into plain text with paragraphs and full link targets", () => {
@@ -38,5 +38,23 @@ describe("threadMonth", () => {
   it("takes the month from the thread title", () => {
     expect(threadMonth("Ask HN: Who is hiring? (October 2026)")).toBe("October 2026");
     expect(threadMonth("Ask HN: Who is hiring?")).toBe("Ask HN: Who is hiring?");
+  });
+});
+
+describe("parseHnPostId", () => {
+  it("reads a plain post id", () => {
+    expect(parseHnPostId("45123456")).toBe(45123456);
+  });
+
+  it("rejects anything that isn't a positive whole number", () => {
+    for (const raw of ["", "0", "-5", "1.5", "12abc", "abc", " 12", "1e3", "99999999999999999999"]) {
+      expect(parseHnPostId(raw)).toBeNull();
+    }
+  });
+});
+
+describe("hnPostPath", () => {
+  it("is the page a post can be shared at", () => {
+    expect(hnPostPath(45123456)).toBe("/hiring/45123456");
   });
 });
