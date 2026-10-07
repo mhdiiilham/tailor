@@ -112,6 +112,29 @@ export function GeminiKeySettings() {
     <>
       <Card>
         <SectionHeader
+          icon={<ShieldCheck size={18} />}
+          title="Your key never reaches Tailor's server"
+          description="Where your key goes, and where it never goes"
+        />
+        <ul className="grid gap-3 border-t border-line pt-5 text-sm leading-relaxed">
+          {TRUST_FACTS.map((fact) => (
+            <li key={fact} className="flex items-start gap-2.5">
+              <Check size={16} weight="bold" className="mt-0.5 shrink-0 text-good" />
+              <span className="text-muted">{fact}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="border-t border-line pt-4 text-sm text-faint">
+          The details are in the{" "}
+          <Link href="/privacy" className="text-accent underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      </Card>
+
+      <Card>
+        <SectionHeader
           icon={<Key size={18} />}
           title="Gemini API key"
           description={status(saved, remembered)}
@@ -192,69 +215,56 @@ export function GeminiKeySettings() {
           </div>
         </form>
       </Card>
+    </>
+  );
+}
 
-      <Card>
-        <SectionHeader
-          icon={<ShieldCheck size={18} />}
-          title="Your key never reaches Tailor's server"
-          description="Where your key goes, and where it never goes"
-        />
-        <ul className="grid gap-3 border-t border-line pt-5 text-sm leading-relaxed">
-          {TRUST_FACTS.map((fact) => (
-            <li key={fact} className="flex items-start gap-2.5">
-              <Check size={16} weight="bold" className="mt-0.5 shrink-0 text-good" />
-              <span className="text-muted">{fact}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="border-t border-line pt-4 text-sm text-faint">
-          The details are in the{" "}
-          <Link href="/privacy" className="text-accent underline">
-            Privacy Policy
-          </Link>
-          .
-        </p>
-      </Card>
-
-      <Card>
+// Optional hardening steps for the key, shown next to the models.
+export function KeySafetyCard() {
+  return (
+    // From md up the card is taken out of the flow, so the Models card beside it sets the row height and the steps scroll inside.
+    <div className="md:relative">
+      <Card className="md:absolute md:inset-0 md:grid-rows-[auto_minmax(0,1fr)] md:overflow-hidden">
         <SectionHeader
           icon={<Shield size={18} />}
           title="Keep your key safe"
           description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
         />
-        <ol className="grid gap-3 border-t border-line pt-5">
-          {SAFETY_STEPS.map((step, i) => (
-            <li
-              key={step.title}
-              className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
-            >
-              <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
-                {i + 1}
-              </span>
-              <span className="grid gap-0.5">
-                <span className="text-sm font-medium">{step.title}</span>
-                <span className="text-sm leading-relaxed text-muted">{step.body}</span>
-              </span>
-              <a
-                href={step.link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
+        <div className="grid content-start gap-4 border-t border-line pt-5 md:min-h-0 md:overflow-y-auto">
+          <ol className="grid gap-3">
+            {SAFETY_STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="grid gap-3 rounded-ui border border-line bg-sunken p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
               >
-                {step.label}
-                <ArrowSquareOut size={13} />
-              </a>
-            </li>
-          ))}
-        </ol>
-        <p className="border-t border-line pt-4 text-sm text-faint">
-          <Question size={15} className="mr-2 inline align-[-2px]" />
-          New to Gemini keys?{" "}
-          <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
-            Google’s guide to getting one
-          </a>
-        </p>
+                <span className="grid size-6 place-items-center rounded-full bg-accent-soft font-mono text-xs text-accent">
+                  {i + 1}
+                </span>
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="text-sm leading-relaxed text-muted">{step.body}</span>
+                </span>
+                <a
+                  href={step.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-accent hover:underline"
+                >
+                  {step.label}
+                  <ArrowSquareOut size={13} />
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p className="text-sm text-faint">
+            <Question size={15} className="mr-2 inline align-[-2px]" />
+            New to Gemini keys?{" "}
+            <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
+              Google’s guide to getting one
+            </a>
+          </p>
+        </div>
       </Card>
-    </>
+    </div>
   );
 }

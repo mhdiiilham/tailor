@@ -33,3 +33,17 @@ export function scrubSecret(text: string, secret: string | undefined): string {
   if (!secret || secret.length < 8) return text;
   return text.split(secret).join("[redacted]");
 }
+
+export class OllamaUnreachableError extends Error {
+  constructor() {
+    super(
+      "Couldn't reach Ollama. Check that it's running and was started with OLLAMA_ORIGINS set to this site's address.",
+    );
+  }
+}
+
+export class OllamaModelMissingError extends Error {
+  constructor(readonly model: string) {
+    super(`Ollama doesn't have the model "${model}". Run: ollama pull ${model}`);
+  }
+}
