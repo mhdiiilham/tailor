@@ -1,11 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-
-// The landing, legal and HN Jobs pages (the list and each post), health check and auth endpoints are public; everything else needs a session.
-const PUBLIC_PATHS = ["/", "/privacy", "/terms", "/jobs", "/api/health", "/sample-resume.pdf"];
-// A single job post (/jobs/<id>) is public too, so a link to it can be shared.
-const isPublic = (path: string) =>
-  PUBLIC_PATHS.includes(path) || /^\/jobs\/\d+$/.test(path) || path.startsWith("/api/auth");
+import { isPublicPath } from "@/domain/publicPaths";
 
 // A fresh nonce per request lets Next's own inline scripts run while blocking
 // anything injected. That matters because the Gemini key sits in this browser, and
@@ -31,7 +26,7 @@ function contentSecurityPolicy(nonce: string): string {
 
 export function proxy(request: NextRequest) {
   // Only a quick redirect: pages, actions and routes still verify the session with requireUser().
-  if (!isPublic(request.nextUrl.pathname) && !getSessionCookie(request)) {
+  if (!isPublicPath(request.nextUrl.pathname) && !getSessionCookie(request)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
