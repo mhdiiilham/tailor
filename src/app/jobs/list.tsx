@@ -78,7 +78,7 @@ export function HnPostList({ signedIn, view, savedCount, threadId, months, lates
             role="tab"
             aria-selected={view === value}
             onClick={() =>
-              value === "saved" && !signedIn ? router.push(signInHref("/hiring?view=saved")) : show({ view: value })
+              value === "saved" && !signedIn ? router.push(signInHref("/jobs?view=saved")) : show({ view: value })
             }
             className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 ${
               view === value ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
@@ -311,7 +311,7 @@ function PostCard({ row, signedIn }: { row: HnPostRow; signedIn: boolean }) {
           <SaveButton postId={row.id} initial={row.saved} />
         ) : (
           <a
-            href={signInHref("/hiring")}
+            href={signInHref("/jobs")}
             title="Sign in to save posts"
             className="inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs text-muted hover:text-ink"
           >

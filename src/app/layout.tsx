@@ -44,7 +44,7 @@ export const viewport: Viewport = {
 const nav = [
   { href: "/", label: "Applications" },
   { href: "/new", label: "New" },
-  { href: "/hiring", label: "HN Jobs" },
+  { href: "/jobs", label: "HN Jobs" },
   { href: "/profile", label: "Profile" },
   { href: "/settings", label: "Settings" },
 ];
@@ -85,7 +85,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             ) : (
               <nav className="flex items-center gap-1 text-sm">
-                <Link href="/hiring" className="rounded-ui px-3 py-1.5 text-muted hover:text-ink">
+                <Link href="/jobs" className="rounded-ui px-3 py-1.5 text-muted hover:text-ink">
                   HN Jobs
                 </Link>
                 <Link href="/#how" className="hidden rounded-ui px-3 py-1.5 text-muted hover:text-ink sm:block">

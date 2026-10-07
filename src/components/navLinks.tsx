@@ -9,7 +9,7 @@ export type NavItem = { href: string; label: string };
 const ICONS: Record<string, Icon> = {
   "/": ListChecks,
   "/new": PlusCircle,
-  "/hiring": Briefcase,
+  "/jobs": Briefcase,
   "/profile": IdentificationCard,
   "/settings": Gear,
 };

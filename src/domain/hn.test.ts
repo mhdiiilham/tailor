@@ -55,6 +55,6 @@ describe("parseHnPostId", () => {
 
 describe("hnPostPath", () => {
   it("is the page a post can be shared at", () => {
-    expect(hnPostPath(45123456)).toBe("/hiring/45123456");
+    expect(hnPostPath(45123456)).toBe("/jobs/45123456");
   });
 });

@@ -13,11 +13,11 @@ export const metadata: Metadata = pageMetadata({
   title: "HN Who's Hiring",
   description:
     'Job posts from Hacker News\' monthly "Who is hiring?" thread, searchable by role, location and stack, with a tailored CV one click away.',
-  path: "/hiring",
+  path: "/jobs",
 });
 export const dynamic = "force-dynamic";
 
-export default async function HiringPage({ searchParams }: PageProps<"/hiring">) {
+export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   // Public: anyone can browse. Tailor CV, Save and the Saved tab need a signed-in user.
   const user = await getCurrentUser();
   // Every month's thread stays stored; ?thread= picks one, the latest by default.

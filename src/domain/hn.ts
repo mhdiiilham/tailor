@@ -83,4 +83,4 @@ export function parseHnPostId(raw: string): number | null {
 }
 
 // Where one post can be opened and shared.
-export const hnPostPath = (id: number): string => `/hiring/${id}`;
+export const hnPostPath = (id: number): string => `/jobs/${id}`;

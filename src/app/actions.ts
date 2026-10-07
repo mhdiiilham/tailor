@@ -16,8 +16,8 @@ import { getCurrentUser, requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
 import { parseStageFilter, StageSchema } from "@/domain/stage";
 import { loadRowPage } from "./dashboard/load";
-import { loadHnPage } from "./hiring/load";
-import { parseWorkMode, type HnRowPage, type HnSource } from "./hiring/rows";
+import { loadHnPage } from "./jobs/load";
+import { parseWorkMode, type HnRowPage, type HnSource } from "./jobs/rows";
 import type { RowPage } from "./dashboard/rows";
 
 export type ActionState = { error?: string; notice?: string };
