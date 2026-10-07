@@ -3,10 +3,10 @@
 import { ArrowSquareOut, BookmarkSimple, MagicWand, MagnifyingGlass } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { loadHnPosts, setHnPostSaved } from "@/app/actions";
-import { Badge, Button, ButtonLink, FormMessage, Select, type BadgeTone } from "@/components/ui";
-import { safeUrl, type WorkMode } from "@/domain/hn";
-import { splitLinks } from "@/domain/linkify";
+import { loadHnPosts } from "@/app/actions";
+import { Badge, Button, ButtonLink, FormMessage, Select } from "@/components/ui";
+import { safeUrl } from "@/domain/hn";
+import { FitBadge, MODE_LABEL, MODE_TONE, OriginalPost, SaveButton, signInHref } from "./postParts";
 import type { HnPostRow, HnRowPage, HnSource, WorkModeFilter } from "./rows";
 
 const FILTERS: { value: WorkModeFilter; label: string }[] = [
@@ -16,18 +16,7 @@ const FILTERS: { value: WorkModeFilter; label: string }[] = [
   { value: "onsite", label: "Onsite" },
 ];
 
-const MODE_LABEL: Record<WorkMode, string> = { remote: "Remote", hybrid: "Hybrid", onsite: "Onsite", unknown: "" };
-const MODE_TONE: Record<WorkMode, BadgeTone> = {
-  remote: "good",
-  hybrid: "accent",
-  onsite: "neutral",
-  unknown: "neutral",
-};
-
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
-
-// Sign in on the home page, then go on to `next`.
-const signInHref = (next: string) => `/?next=${encodeURIComponent(next)}#signin`;
 
 type Props = {
   signedIn: boolean;
@@ -333,82 +322,5 @@ function PostCard({ row, signedIn }: { row: HnPostRow; signedIn: boolean }) {
         <span className="ml-auto font-mono text-xs text-faint">by {row.author}</span>
       </div>
     </li>
-  );
-}
-
-// The post as written on HN: its paragraphs, with every web link clickable. The text
-// is plain (converted when it was fetched), so nothing in it is rendered as HTML.
-function OriginalPost({ text }: { text: string }) {
-  return (
-    <div className="grid max-h-[560px] gap-3 overflow-y-auto pr-1 text-sm leading-relaxed text-ink">
-      {text.split(/\n{2,}/).map((paragraph, i) => (
-        <p key={i} className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-          {splitLinks(paragraph).map((part, j) =>
-            part.href ? (
-              <a
-                key={j}
-                href={part.href}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                className="text-accent underline decoration-accent/40 hover:decoration-accent"
-              >
-                {part.text}
-              </a>
-            ) : (
-              part.text
-            ),
-          )}
-        </p>
-      ))}
-    </div>
-  );
-}
-
-// Saves the post to the user's list (or removes it), right away, undoing on failure.
-function SaveButton({ postId, initial }: { postId: number; initial: boolean }) {
-  const router = useRouter();
-  const [saved, setSaved] = useState(initial);
-  const [pending, startTransition] = useTransition();
-
-  function toggle() {
-    const next = !saved;
-    setSaved(next);
-    startTransition(async () => {
-      const result = await setHnPostSaved(postId, next);
-      if (result.error) {
-        setSaved(!next);
-        alert(result.error);
-      } else {
-        router.refresh(); // updates the Saved count
-      }
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      disabled={pending}
-      aria-pressed={saved}
-      className={`inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs transition-colors disabled:opacity-60 ${
-        saved ? "text-accent" : "text-muted hover:text-ink"
-      }`}
-    >
-      <BookmarkSimple size={14} weight={saved ? "fill" : "regular"} />
-      {saved ? "Saved" : "Save"}
-    </button>
-  );
-}
-
-// A badge that never gets wider than the card: Gemini sometimes copies a whole sentence
-// into a field (a salary note, a long location), and badges don't wrap. Anything too
-// long is cut with "…"; the full text shows on hover.
-function FitBadge({ mono = false, children }: { mono?: boolean; children: string }) {
-  return (
-    <span className="flex min-w-0 max-w-full sm:max-w-80">
-      <Badge mono={mono} truncate>
-        {children}
-      </Badge>
-    </span>
   );
 }
