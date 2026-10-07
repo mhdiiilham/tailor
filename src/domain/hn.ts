@@ -84,3 +84,11 @@ export function parseHnPostId(raw: string): number | null {
 
 // Where one post can be opened and shared.
 export const hnPostPath = (id: number): string => `/jobs/${id}`;
+
+// A post's name for the page title and headings: role and company once parsed, otherwise
+// the first line of the post as written.
+export function hnPostTitle(text: string, job: HnJob | null): string {
+  if (job?.company || job?.role)
+    return job.role && job.company ? `${job.role} at ${job.company}` : job.role || job.company;
+  return text.split("\n")[0].slice(0, 120);
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hnPostPath, hnText, isHiringThread, parseHnPostId, safeUrl, threadMonth } from "./hn";
+import { hnPostPath, hnPostTitle, hnText, isHiringThread, parseHnPostId, safeUrl, threadMonth } from "./hn";
+import type { HnJob } from "./hn";
 
 describe("hnText", () => {
   it("turns HN comment HTML into plain text with paragraphs and full link targets", () => {
@@ -56,5 +57,28 @@ describe("parseHnPostId", () => {
 describe("hnPostPath", () => {
   it("is the page a post can be shared at", () => {
     expect(hnPostPath(45123456)).toBe("/jobs/45123456");
+  });
+});
+
+describe("hnPostTitle", () => {
+  const job: HnJob = {
+    company: "Acme",
+    role: "Backend Engineer",
+    location: "",
+    workMode: "remote",
+    salary: "",
+    techStack: [],
+    applyUrl: "",
+  };
+
+  it("names the role and company once the post is parsed", () => {
+    expect(hnPostTitle("Acme | Backend Engineer | REMOTE\n\nWe build things.", job)).toBe("Backend Engineer at Acme");
+    expect(hnPostTitle("x", { ...job, role: "" })).toBe("Acme");
+    expect(hnPostTitle("x", { ...job, company: "" })).toBe("Backend Engineer");
+  });
+
+  it("uses the post's first line, shortened, before it is parsed", () => {
+    expect(hnPostTitle("Acme | Go | REMOTE\n\nMore", null)).toBe("Acme | Go | REMOTE");
+    expect(hnPostTitle("a".repeat(300), null)).toHaveLength(120);
   });
 });
