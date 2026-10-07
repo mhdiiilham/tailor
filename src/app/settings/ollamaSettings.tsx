@@ -58,7 +58,7 @@ export function OllamaSettings() {
       {config === null ? (
         <Skeleton className="h-24" />
       ) : (
-        <div className="grid gap-5 border-t border-line pt-5">
+        <div className="grid gap-5 border-t border-line pt-5 sm:pl-12">
           <label className="flex cursor-pointer items-start gap-3 text-sm">
             <input
               type="checkbox"
