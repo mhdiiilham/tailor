@@ -4,27 +4,11 @@ import { BookmarkSimple, Check, Link as LinkIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { setHnPostSaved } from "@/app/actions";
-import { Badge, type BadgeTone } from "@/components/ui";
-import { hnPostPath, type WorkMode } from "@/domain/hn";
+import { Badge } from "@/components/ui";
+import { hnPostPath } from "@/domain/hn";
 import { splitLinks } from "@/domain/linkify";
 
 // Pieces shared by the post list and the single-post page.
-
-export const MODE_LABEL: Record<WorkMode, string> = {
-  remote: "Remote",
-  hybrid: "Hybrid",
-  onsite: "Onsite",
-  unknown: "",
-};
-export const MODE_TONE: Record<WorkMode, BadgeTone> = {
-  remote: "good",
-  hybrid: "accent",
-  onsite: "neutral",
-  unknown: "neutral",
-};
-
-// Sign in on the home page, then go on to `next`.
-export const signInHref = (next: string) => `/?next=${encodeURIComponent(next)}#signin`;
 
 // The post as written on HN: its paragraphs, with every web link clickable. The text
 // is plain (converted when it was fetched), so nothing in it is rendered as HTML.

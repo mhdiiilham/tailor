@@ -3,11 +3,12 @@ import { ArrowLeft, ArrowSquareOut, BookmarkSimple, MagicWand } from "@phosphor-
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageMetadata } from "@/app/seo/site";
-import { Badge, ButtonLink } from "@/components/ui";
+import { Badge, ButtonAnchor, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { hnRepository } from "@/container";
 import { hnPostPath, hnPostTitle, parseHnPostId, safeUrl } from "@/domain/hn";
 import { getCurrentUser } from "@/infrastructure/auth/session";
-import { CopyLinkButton, FitBadge, MODE_LABEL, MODE_TONE, OriginalPost, SaveButton, signInHref } from "../postParts";
+import { CopyLinkButton, FitBadge, OriginalPost, SaveButton } from "../postParts";
+import { MODE_LABEL, MODE_TONE, signInHref } from "../shared";
 
 export const dynamic = "force-dynamic";
 
@@ -37,87 +38,111 @@ export default async function JobPage({ params }: PageProps<"/jobs/[id]">) {
   const saved = user ? (await hnRepository().savedIds(user.id, [post.id])).includes(post.id) : false;
   const job = post.job;
   const tailorHref = `/new?hn=${post.id}`;
-  const hnUrl = `https://news.ycombinator.com/item?id=${post.id}`;
+  const applyUrl = job ? safeUrl(job.applyUrl) : "";
+  const facts = [
+    job && job.workMode !== "unknown"
+      ? { label: "Work mode", value: <Badge tone={MODE_TONE[job.workMode]}>{MODE_LABEL[job.workMode]}</Badge> }
+      : null,
+    job?.location
+      ? { label: "Location", value: <span className="text-sm [overflow-wrap:anywhere]">{job.location}</span> }
+      : null,
+    job?.salary
+      ? { label: "Pay", value: <span className="font-mono text-sm [overflow-wrap:anywhere]">{job.salary}</span> }
+      : null,
+  ].filter((f) => f !== null);
 
   return (
-    <article className="mx-auto grid w-full max-w-3xl gap-6">
-      <Link
-        href="/jobs"
-        className="inline-flex items-center gap-1.5 justify-self-start text-sm text-muted hover:text-ink"
-      >
-        <ArrowLeft size={14} />
-        All jobs
-      </Link>
-
-      <header className="grid gap-3">
-        <h1 className="text-2xl font-medium [overflow-wrap:anywhere]">{hnPostTitle(post.text, job)}</h1>
-        <p className="font-mono text-xs text-faint">
-          Posted {dateFormat.format(post.postedAt)} by {post.author}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {job && job.workMode !== "unknown" ? (
-            <Badge tone={MODE_TONE[job.workMode]}>{MODE_LABEL[job.workMode]}</Badge>
-          ) : null}
-          {job?.location ? <FitBadge>{job.location}</FitBadge> : null}
-          {job?.salary ? <FitBadge mono>{job.salary}</FitBadge> : null}
-          {job?.techStack.map((t) => (
-            <FitBadge key={t} mono>
-              {t}
-            </FitBadge>
-          ))}
-        </div>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-2 border-y border-line py-3">
-        <ButtonLink
-          size="sm"
-          href={user ? tailorHref : signInHref(tailorHref)}
-          title={user ? undefined : "Sign in to tailor a CV for this job"}
+    <div className="grid grid-cols-1 gap-8">
+      <div className="grid gap-4">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-1.5 justify-self-start text-sm text-muted hover:text-ink"
         >
-          <MagicWand size={14} />
-          Tailor CV
-        </ButtonLink>
-        {job && safeUrl(job.applyUrl) ? (
-          <a
-            href={safeUrl(job.applyUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-8 items-center gap-1.5 rounded-ui border border-line px-3 text-xs font-medium hover:bg-sunken"
-          >
-            Apply
-            <ArrowSquareOut size={12} />
-          </a>
-        ) : null}
-        <a
-          href={hnUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-8 items-center gap-1.5 px-2 text-xs text-muted hover:text-ink"
-        >
-          View on HN
-          <ArrowSquareOut size={12} />
-        </a>
-        {user ? (
-          <SaveButton postId={post.id} initial={saved} />
-        ) : (
-          <a
-            href={signInHref(hnPostPath(post.id))}
-            title="Sign in to save posts"
-            className="inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs text-muted hover:text-ink"
-          >
-            <BookmarkSimple size={14} />
-            Save
-          </a>
-        )}
-        <CopyLinkButton postId={post.id} />
+          <ArrowLeft size={14} />
+          All jobs
+        </Link>
+        <PageHeader
+          title={hnPostTitle(post.text, job)}
+          description={`Posted ${dateFormat.format(post.postedAt)} by ${post.author} on Hacker News's "Who is hiring?" thread.`}
+        />
       </div>
 
-      <section
-        className="rounded-card border border-line bg-raised p-5 md:p-6"
-        aria-label="The post as written on Hacker News"
-      >
-        <OriginalPost text={post.text} scroll={false} />
-      </section>
-    </article>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        {/* The actions come first on a phone, and sit beside the post on a wide screen. */}
+        <aside className="grid gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1">
+          <Card>
+            <ButtonLink
+              href={user ? tailorHref : signInHref(tailorHref)}
+              title={user ? undefined : "Sign in to tailor a CV for this job"}
+            >
+              <MagicWand size={16} />
+              Tailor CV
+            </ButtonLink>
+            {applyUrl ? (
+              <ButtonAnchor variant="secondary" href={applyUrl} target="_blank" rel="noopener noreferrer">
+                Apply
+                <ArrowSquareOut size={14} />
+              </ButtonAnchor>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-1 border-t border-line pt-3">
+              {user ? (
+                <SaveButton postId={post.id} initial={saved} />
+              ) : (
+                <a
+                  href={signInHref(hnPostPath(post.id))}
+                  title="Sign in to save posts"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs text-muted hover:text-ink"
+                >
+                  <BookmarkSimple size={14} />
+                  Save
+                </a>
+              )}
+              <CopyLinkButton postId={post.id} />
+              <a
+                href={`https://news.ycombinator.com/item?id=${post.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-ui px-2 text-xs text-muted hover:text-ink"
+              >
+                View on HN
+                <ArrowSquareOut size={12} />
+              </a>
+            </div>
+          </Card>
+
+          {facts.length || job?.techStack.length ? (
+            <Card>
+              <h2 className="text-sm font-medium">Details</h2>
+              {facts.length ? (
+                <dl className="grid gap-3 border-t border-line pt-4">
+                  {facts.map((f) => (
+                    <div key={f.label} className="grid gap-1">
+                      <dt className="font-mono text-xs uppercase text-faint">{f.label}</dt>
+                      <dd>{f.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+              {job?.techStack.length ? (
+                <div className="grid gap-2 border-t border-line pt-4">
+                  <p className="font-mono text-xs uppercase text-faint">Stack</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.techStack.map((t) => (
+                      <FitBadge key={t} mono>
+                        {t}
+                      </FitBadge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+          ) : null}
+        </aside>
+
+        <Card className="min-w-0 lg:col-start-1 lg:row-start-1" aria-label="The post as written on Hacker News">
+          <OriginalPost text={post.text} scroll={false} />
+        </Card>
+      </div>
+    </div>
   );
 }

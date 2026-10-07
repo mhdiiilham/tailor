@@ -7,7 +7,8 @@ import { useRef, useState, useTransition } from "react";
 import { loadHnPosts } from "@/app/actions";
 import { Badge, Button, ButtonLink, FormMessage, Select } from "@/components/ui";
 import { hnPostPath, safeUrl } from "@/domain/hn";
-import { CopyLinkButton, FitBadge, MODE_LABEL, MODE_TONE, OriginalPost, SaveButton, signInHref } from "./postParts";
+import { CopyLinkButton, FitBadge, OriginalPost, SaveButton } from "./postParts";
+import { MODE_LABEL, MODE_TONE, signInHref } from "./shared";
 import type { HnPostRow, HnRowPage, HnSource, WorkModeFilter } from "./rows";
 
 const FILTERS: { value: WorkModeFilter; label: string }[] = [
