@@ -1,12 +1,13 @@
 "use client";
 
 import { ArrowSquareOut, BookmarkSimple, MagicWand, MagnifyingGlass } from "@phosphor-icons/react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { loadHnPosts } from "@/app/actions";
 import { Badge, Button, ButtonLink, FormMessage, Select } from "@/components/ui";
-import { safeUrl } from "@/domain/hn";
-import { FitBadge, MODE_LABEL, MODE_TONE, OriginalPost, SaveButton, signInHref } from "./postParts";
+import { hnPostPath, safeUrl } from "@/domain/hn";
+import { CopyLinkButton, FitBadge, MODE_LABEL, MODE_TONE, OriginalPost, SaveButton, signInHref } from "./postParts";
 import type { HnPostRow, HnRowPage, HnSource, WorkModeFilter } from "./rows";
 
 const FILTERS: { value: WorkModeFilter; label: string }[] = [
@@ -226,16 +227,16 @@ function PostCard({ row, signedIn }: { row: HnPostRow; signedIn: boolean }) {
   return (
     <li className="grid min-w-0 grid-cols-1 gap-3 rounded-card border border-line bg-raised p-4 md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid min-w-0 gap-1">
+        <Link href={hnPostPath(row.id)} className="group grid min-w-0 gap-1">
           {job && titled ? (
             <>
-              <p className="font-medium">{job.role || "Open roles"}</p>
+              <p className="font-medium group-hover:text-accent">{job.role || "Open roles"}</p>
               <p className="text-sm text-muted">{job.company}</p>
             </>
           ) : (
-            <p className="[overflow-wrap:anywhere] font-medium">{firstLine.slice(0, 160)}</p>
+            <p className="[overflow-wrap:anywhere] font-medium group-hover:text-accent">{firstLine.slice(0, 160)}</p>
           )}
-        </div>
+        </Link>
         <span className="font-mono text-xs text-faint">{dateFormat.format(new Date(row.postedAt))}</span>
       </div>
 
@@ -319,6 +320,7 @@ function PostCard({ row, signedIn }: { row: HnPostRow; signedIn: boolean }) {
             Save
           </a>
         )}
+        <CopyLinkButton postId={row.id} />
         <span className="ml-auto font-mono text-xs text-faint">by {row.author}</span>
       </div>
     </li>
