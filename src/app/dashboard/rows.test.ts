@@ -38,18 +38,20 @@ describe("summarize", () => {
     { stage: "rejected", count: 1, applied: 1, scored: 1, scoreSum: 80 },
     { stage: "withdrawn", count: 1, applied: 1, scored: 1, scoreSum: 60 },
     { stage: "interviewing", count: 1, applied: 1, scored: 1, scoreSum: 90 },
+    { stage: "technical_assessment", count: 2, applied: 2, scored: 1, scoreSum: 75 },
   ];
 
   it("counts applied, interviews and offers, and averages the fit of analyzed jobs only", () => {
-    // 460 over the 6 scored jobs; the tracked one (in "applied") has no score.
-    expect(summarize(stats)).toMatchObject({ total: 7, averageFit: 77, applied: 6, interviewing: 1, offers: 0 });
+    // 535 over the 7 scored jobs; the tracked one (in "applied") has no score.
+    expect(summarize(stats)).toMatchObject({ total: 9, averageFit: 76, applied: 8, interviewing: 1, offers: 0 });
   });
 
   it("counts each filter tab, grouping rejected and withdrawn as closed", () => {
     expect(summarize(stats).byFilter).toEqual({
-      all: 7,
+      all: 9,
       not_applied: 1,
       applied: 3,
+      technical_assessment: 2,
       interviewing: 1,
       offer: 0,
       closed: 2,

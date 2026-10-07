@@ -2,13 +2,22 @@ import { z } from "zod";
 
 // Where the job application itself stands. Separate from the resume's status
 // ("questions" / "generated"), which is about the tailoring work.
-export const STAGES = ["not_applied", "applied", "interviewing", "offer", "rejected", "withdrawn"] as const;
+export const STAGES = [
+  "not_applied",
+  "applied",
+  "technical_assessment",
+  "interviewing",
+  "offer",
+  "rejected",
+  "withdrawn",
+] as const;
 export const StageSchema = z.enum(STAGES);
 export type Stage = z.infer<typeof StageSchema>;
 
 export const STAGE_LABELS: Record<Stage, string> = {
   not_applied: "Not applied",
   applied: "Applied",
+  technical_assessment: "Technical assessment",
   interviewing: "Interviewing",
   offer: "Offer",
   rejected: "Rejected",
@@ -18,7 +27,15 @@ export const STAGE_LABELS: Record<Stage, string> = {
 export const CLOSED_STAGES: Stage[] = ["rejected", "withdrawn"];
 
 // The list's filter tabs. Rejected and Withdrawn are grouped as "closed".
-export const STAGE_FILTERS = ["all", "not_applied", "applied", "interviewing", "offer", "closed"] as const;
+export const STAGE_FILTERS = [
+  "all",
+  "not_applied",
+  "applied",
+  "technical_assessment",
+  "interviewing",
+  "offer",
+  "closed",
+] as const;
 export type StageFilter = (typeof STAGE_FILTERS)[number];
 
 // The stages a filter covers; null means every stage.

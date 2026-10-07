@@ -130,7 +130,7 @@ describe("listPage", () => {
     expect(last.nextCursor).toBeNull();
   });
 
-  it("orders offers, then interviews, then the rest, then rejected, then withdrawn", async () => {
+  it("orders offers, then interviews and assessments, then the rest, then rejected, then withdrawn", async () => {
     const day = (d: number) => new Date(`2026-10-0${d}T00:00:00Z`);
     const repo = new DrizzleApplicationRepository(db);
     const make = async (role: string, stage: Stage, appliedAt: Date | null, stageUpdatedAt: Date | null) =>
@@ -139,6 +139,7 @@ describe("listPage", () => {
     const notYet = await make("not applied", "not_applied", null, null);
     const rejectedRecent = await make("rejected, applied Oct 7", "rejected", day(7), day(8));
     const interviewOld = await make("interviewing, applied Oct 2", "interviewing", day(2), day(6));
+    const assessment = await make("assessment, applied Oct 3", "technical_assessment", day(3), day(7));
     const late = await make("applied Oct 5", "applied", day(5), day(5));
     const offer = await make("offer, applied Oct 1", "offer", day(1), day(9));
     const sameDayRecent = await make("applied Oct 3, follow-up Oct 6", "applied", day(3), day(6));
@@ -150,6 +151,7 @@ describe("listPage", () => {
     const order = [
       offer,
       interviewNew,
+      assessment,
       interviewOld,
       late,
       sameDayRecent,

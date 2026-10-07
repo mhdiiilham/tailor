@@ -33,13 +33,14 @@ export class DrizzleProfileRepository implements ProfileRepository {
   }
 }
 
-// The list's order: offers first, then interviews, then everything else, then rejected,
+// The list's order: offers first, then interviews and assessments, then everything else, then rejected,
 // with withdrawn last. Within each group, newest applied date, then latest stage change,
 // then id. Missing dates (not applied yet, stage never changed) sort as "-infinity",
 // so they come after the dated ones.
 const STAGE_RANK: Record<Stage, number> = {
   offer: 4,
   interviewing: 3,
+  technical_assessment: 3,
   applied: 2,
   not_applied: 2,
   rejected: 1,

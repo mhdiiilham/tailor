@@ -19,6 +19,14 @@ describe("moveToStage", () => {
     expect(moveToStage(fresh, "rejected", now).appliedAt).toEqual(now);
   });
 
+  it("counts a technical assessment as applied too", () => {
+    expect(moveToStage(fresh, "technical_assessment", now)).toEqual({
+      stage: "technical_assessment",
+      stageUpdatedAt: now,
+      appliedAt: now,
+    });
+  });
+
   it("changes nothing when the stage is the same", () => {
     expect(moveToStage(fresh, "not_applied", now)).toBe(fresh);
   });
@@ -29,10 +37,12 @@ describe("stage filters", () => {
     expect(stagesFor("all")).toBeNull();
     expect(stagesFor("closed")).toEqual(["rejected", "withdrawn"]);
     expect(stagesFor("applied")).toEqual(["applied"]);
+    expect(stagesFor("technical_assessment")).toEqual(["technical_assessment"]);
   });
 
   it("falls back to all for anything unknown", () => {
     expect(parseStageFilter("offer")).toBe("offer");
+    expect(parseStageFilter("technical_assessment")).toBe("technical_assessment");
     expect(parseStageFilter("rejected")).toBe("all");
     expect(parseStageFilter(undefined)).toBe("all");
   });
