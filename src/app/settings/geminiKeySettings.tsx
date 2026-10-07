@@ -3,7 +3,6 @@
 import {
   ArrowSquareOut,
   Broadcast,
-  CaretDown,
   Check,
   CheckCircle,
   FloppyDisk,
@@ -222,27 +221,17 @@ export function GeminiKeySettings() {
 
 // Optional hardening steps for the key, shown next to the models.
 export function KeySafetyCard() {
-  const [open, setOpen] = useState(false);
   return (
-    <Card>
-      <SectionHeader
-        icon={<Shield size={18} />}
-        title="Keep your key safe"
-        description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
-      />
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="key-safety-steps"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 justify-self-start text-sm text-accent hover:underline"
-      >
-        {open ? "Show less" : "Read more"}
-        <CaretDown size={14} className={open ? "rotate-180" : ""} />
-      </button>
-      {open ? (
-        <div id="key-safety-steps" className="grid gap-4">
-          <ol className="grid gap-3 border-t border-line pt-5">
+    // From md up the card is taken out of the flow, so the Models card beside it sets the row height and the steps scroll inside.
+    <div className="md:relative">
+      <Card className="md:absolute md:inset-0 md:grid-rows-[auto_minmax(0,1fr)] md:overflow-hidden">
+        <SectionHeader
+          icon={<Shield size={18} />}
+          title="Keep your key safe"
+          description="Worth doing for any key you paste into any app. Each step takes a minute in Google Cloud."
+        />
+        <div className="grid content-start gap-4 border-t border-line pt-5 md:min-h-0 md:overflow-y-auto">
+          <ol className="grid gap-3">
             {SAFETY_STEPS.map((step, i) => (
               <li
                 key={step.title}
@@ -267,7 +256,7 @@ export function KeySafetyCard() {
               </li>
             ))}
           </ol>
-          <p className="border-t border-line pt-4 text-sm text-faint">
+          <p className="text-sm text-faint">
             <Question size={15} className="mr-2 inline align-[-2px]" />
             New to Gemini keys?{" "}
             <a href={GEMINI_KEY_GUIDE} target="_blank" rel="noreferrer" className="text-accent underline">
@@ -275,7 +264,7 @@ export function KeySafetyCard() {
             </a>
           </p>
         </div>
-      ) : null}
-    </Card>
+      </Card>
+    </div>
   );
 }
