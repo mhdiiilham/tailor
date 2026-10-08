@@ -21,5 +21,14 @@ export const FIXED_QUESTIONS: Question[] = [
 ];
 
 export const MAX_GAP_QUESTIONS = 4;
+export const MAX_QUESTIONS = FIXED_QUESTIONS.length + MAX_GAP_QUESTIONS;
+
+// One interview turn. Flat on purpose: small local models handle it reliably.
+export const NextQuestionSchema = z.object({
+  done: z.boolean().describe("true when no further question would improve the resume"),
+  question: z.string().describe("The single next question, or an empty string when done"),
+});
+
+export type NextQuestion = { done: true } | { done: false; question: string };
 
 export type Answers = Record<string, string>;

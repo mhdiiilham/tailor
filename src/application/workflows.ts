@@ -5,10 +5,18 @@ import { FitJudgementSchema, fitScore, type FitAnalysis } from "@/domain/fit";
 import { JobPostingSchema, type JobPosting } from "@/domain/job";
 import type { LlmPort } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
-import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers, type Question } from "@/domain/questions";
+import {
+  FIXED_QUESTIONS,
+  MAX_GAP_QUESTIONS,
+  MAX_QUESTIONS,
+  NextQuestionSchema,
+  type Answers,
+  type NextQuestion,
+  type Question,
+} from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
 import { findBannedWords, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
-import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM, QUESTIONS_SYSTEM } from "@/prompts/analysis";
+import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM, INTERVIEW_SYSTEM, QUESTIONS_SYSTEM } from "@/prompts/analysis";
 import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, TELLS_FIX } from "@/prompts/coverLetter";
 import { profileContext } from "@/prompts/profileContext";
 import { BANNED_WORDS_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
@@ -79,6 +87,45 @@ export function assembleQuestions(gaps: string[]): Question[] {
     ...FIXED_QUESTIONS,
     ...gaps.slice(0, MAX_GAP_QUESTIONS).map((question, i) => ({ id: `gap${i + 1}`, question })),
   ];
+}
+
+export type InterviewTurn = { question: string; answer: string };
+
+// The interview: one question at a time, each chosen from the answers so far.
+// The draft questions from analyzeJob are only a pool the model can draw on.
+export async function nextQuestion(
+  llm: LlmPort,
+  profile: Profile,
+  app: ApplicationContext,
+  turns: InterviewTurn[],
+  onStep: OnStep = noop,
+): Promise<NextQuestion> {
+  if (turns.length >= MAX_QUESTIONS) return { done: true };
+
+  onStep(0);
+  const next = await llm.generateObject({
+    tier: "fast",
+    schema: NextQuestionSchema,
+    system: INTERVIEW_SYSTEM,
+    prompt: [
+      `JOB POSTING (structured):\n${JSON.stringify(app.job, null, 2)}`,
+      `GAP ANALYSIS:\n${JSON.stringify(app.fit, null, 2)}`,
+      `CANDIDATE PROFILE:\n${profileContext(profile)}`,
+      `DRAFT QUESTION POOL:\n${app.questions.map((q) => `- ${q.question}`).join("\n")}`,
+      `ASKED SO FAR (${turns.length} of at most ${MAX_QUESTIONS}):\n${interviewLines(turns)}`,
+    ].join("\n\n"),
+  });
+
+  const question = next.question.trim();
+  const repeated = turns.some((t) => t.question.trim().toLowerCase() === question.toLowerCase());
+  return next.done || !question || repeated ? { done: true } : { done: false, question };
+}
+
+function interviewLines(turns: InterviewTurn[]): string {
+  if (turns.length === 0) return "(nothing yet)";
+  return turns
+    .map((t) => `Q: ${t.question}\nA: ${t.answer.trim() || "(skipped, candidate has no answer)"}`)
+    .join("\n\n");
 }
 
 // Answers in, tailored resume out (the server renders the PDF).

@@ -21,7 +21,19 @@ missingKeywords: up to 10 keywords from the posting that a recruiter or ATS woul
 Mark support HAVE or PARTIAL only when the profile backs it (whereToUse names the role or section it belongs in).
 Mark support MISSING when it does not. Never suggest adding a MISSING keyword to the resume.`;
 
-export const QUESTIONS_SYSTEM = `You write clarifying questions before a resume is tailored for a specific job.
+export const INTERVIEW_SYSTEM = `You interview a candidate one question at a time before their resume is tailored for a specific job.
+You get the job, the gap analysis, the candidate's profile, a pool of draft questions, and every question already asked with its answer.
+
+Pick the single most useful next question, or stop.
+- Read the last answer first. Let it decide what comes next: follow up if it gave a story but no number, skip anything it already covered.
+- If an answer is "(skipped, candidate has no answer)" or says they don't have it, drop that topic for good. Never ask about it again.
+- Use the pool as a starting point. Reword a draft question to build on what the candidate just said, or ask a new one that follows from it.
+- Good targets: a PARTIAL or MISSING requirement the candidate may genuinely have used, or an achievement in the profile that lacks a number.
+- Never ask what the profile already answers. Never repeat a question. One or two sentences, one topic only.
+- Never suggest or assume an answer. The resume will use only the profile and what the candidate says.
+- Set done to true, with an empty question, when no remaining question would improve the resume.`;
+
+export const QUESTIONS_SYSTEM =`You write clarifying questions before a resume is tailored for a specific job.
 Two fixed questions are already asked (what to lead with, and tone). Write 2-4 MORE questions, based on the gap analysis.
 
 Good questions are specific to this job and this candidate, for example:

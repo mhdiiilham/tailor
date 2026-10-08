@@ -3,11 +3,13 @@ import type { FitJudgement } from "@/domain/fit";
 import type { JobPosting } from "@/domain/job";
 import { ProfileSchema } from "@/domain/profile";
 import type { TailoredResume } from "@/domain/resume";
+import { MAX_QUESTIONS } from "@/domain/questions";
 import { FakeLlm } from "@/infrastructure/llm/fakeLlm";
 import {
   analyzeJob,
   cleanResume,
   draftCoverLetter,
+  nextQuestion,
   reviseResume,
   tailorResume,
   type ApplicationContext,
@@ -216,5 +218,47 @@ describe("draftCoverLetter", () => {
 
   it("needs a resume first", async () => {
     await expect(draftCoverLetter(new FakeLlm([]), profile, app)).rejects.toThrow(/resume/);
+  });
+});
+
+describe("nextQuestion", () => {
+  const turn = (question: string, answer: string) => ({ question, answer });
+
+  it("asks the fast model and passes every earlier answer, so the next question can adapt", async () => {
+    const llm = new FakeLlm([{ done: false, question: "How many events per second?" }]);
+
+    const out = await nextQuestion(llm, profile, app, [turn("Lead with?", "The Kafka migration")]);
+
+    expect(out).toEqual({ done: false, question: "How many events per second?" });
+    expect(llm.requests[0].tier).toBe("fast");
+    expect(llm.requests[0].prompt).toContain("Q: Lead with?\nA: The Kafka migration");
+    expect(llm.requests[0].prompt).toContain("Backend Engineer");
+  });
+
+  it("marks a skipped question so it is never asked or written again", async () => {
+    const llm = new FakeLlm([{ done: false, question: "Anything else?" }]);
+
+    await nextQuestion(llm, profile, app, [turn("Have you used Kafka?", "")]);
+
+    expect(llm.requests[0].prompt).toContain("Q: Have you used Kafka?\nA: (skipped, candidate has no answer)");
+  });
+
+  it("stops without calling the model once the question cap is reached", async () => {
+    const llm = new FakeLlm([]);
+    const turns = Array.from({ length: MAX_QUESTIONS }, (_, i) => turn(`Q${i}`, "a"));
+
+    expect(await nextQuestion(llm, profile, app, turns)).toEqual({ done: true });
+    expect(llm.requests).toHaveLength(0);
+  });
+
+  it("is done when the model says so or returns a blank question", async () => {
+    expect(await nextQuestion(new FakeLlm([{ done: true, question: "" }]), profile, app, [])).toEqual({ done: true });
+    expect(await nextQuestion(new FakeLlm([{ done: false, question: "  " }]), profile, app, [])).toEqual({ done: true });
+  });
+
+  it("is done instead of repeating a question that was already asked", async () => {
+    const llm = new FakeLlm([{ done: false, question: " lead with? " }]);
+
+    expect(await nextQuestion(llm, profile, app, [turn("Lead with?", "x")])).toEqual({ done: true });
   });
 });
