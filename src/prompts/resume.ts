@@ -14,6 +14,9 @@ Rank high in AI screening and ATS:
 - Requirements coverage is the strongest signal. Every requirement the candidate HAS must appear in a real bullet with a specific example and result, not only in Skills.
 - Put the top 4-5 JD keywords in three places: the summary, the most recent relevant role's bullets, and Skills. Mirror the JD's exact wording for the most important ones.
 - Every bullet needs a concrete signal: a percentage, a count, a latency number, a scale marker, scope, or speed.
+- Where the profile or the candidate's answers give an outcome, shape the bullet as: Accomplished [X] as measured by [Y] by doing [Z]. X is the outcome, Y is a number or scope stated in the profile or answers, Z is the method or tech. The sentence does not have to repeat those words.
+- If no number or scope exists for a bullet, write it without one and add "needs a metric: <role>" to decisions. Never invent a figure.
+- Never add a skill or keyword the candidate said they lack or answered "no" to. Leave it out.
 - The summary names the role title (or adjacent terms) in its first sentence and is 2-3 sentences, specific to this company. If it can't be specific, return an empty string.
 - Put the most JD-relevant bullet first in each role. Order skill categories and items by relevance. Cut what doesn't help for this role.
 

@@ -108,6 +108,17 @@ describe("tailorResume", () => {
     expect(progress.seen).toEqual([0, 1]);
   });
 
+  it("asks for X-Y-Z bullets and forbids inventing metrics or lacking skills", async () => {
+    const llm = new FakeLlm([resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    const { system } = llm.requests[0];
+    expect(system).toContain("Accomplished [X] as measured by [Y] by doing [Z]");
+    expect(system).toContain("needs a metric");
+    expect(system).toContain("said they lack");
+  });
+
   it("asks once more when the draft uses banned words", async () => {
     const sloppy = { ...resume, summary: "A passionate engineer who will leverage Go." };
     const llm = new FakeLlm([sloppy, resume]);
