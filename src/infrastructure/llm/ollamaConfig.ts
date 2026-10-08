@@ -18,11 +18,11 @@ export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
 // Models worth trying, shown in the setup guide. Cloud ones run on ollama.com through the
 // person's own Ollama, so they are still called on localhost.
 export const RECOMMENDED_MODELS = [
-  { name: "qwen2.5:7b", where: "This computer", note: "The default. Needs about 8 GB of free memory." },
-  { name: "llama3.1:8b", where: "This computer", note: "A good alternative at the same size." },
-  { name: "qwen2.5:14b", where: "This computer", note: "Better writing. Needs about 16 GB of free memory." },
-  { name: "gpt-oss:120b-cloud", where: "Ollama cloud", note: "Closest to Gemini. Needs ollama signin." },
-  { name: "qwen3-coder:480b-cloud", where: "Ollama cloud", note: "Large and strong. Needs ollama signin." },
+  { name: "gpt-oss:20b-cloud", where: "Ollama cloud", note: "Fast model. Quick and good at JSON. Needs ollama signin." },
+  { name: "gpt-oss:120b-cloud", where: "Ollama cloud", note: "Writing model. Closest to Gemini, but slower. Needs ollama signin." },
+  { name: "qwen2.5:7b", where: "This computer", note: "Fast model and the default. Needs about 8 GB of free memory." },
+  { name: "qwen2.5:14b", where: "This computer", note: "Writing model. Needs about 16 GB of free memory." },
+  { name: "gemma4:12b", where: "This computer", note: "Worth trying for the writing model. More natural prose." },
 ] as const;
 
 // Names like "qwen2.5:7b" or "hf.co/user/model:Q4_K_M". Anything else is ignored.

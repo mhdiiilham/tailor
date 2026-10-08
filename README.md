@@ -196,7 +196,7 @@ People can run the AI steps on [Ollama](https://ollama.com) instead of a Gemini 
 1. Install and start Ollama.
 2. Allow the site: start Ollama with `OLLAMA_ORIGINS` set to the site's address, for example `OLLAMA_ORIGINS="https://tailor.example.com" ollama serve`. On the Mac app use `launchctl setenv OLLAMA_ORIGINS "<address>"` and restart it.
 3. Pull a model, such as `ollama pull qwen2.5:7b`, then enter its name in Settings and press Test connection. Models under about 7B often break the JSON the app needs.
-4. Optional, cloud models: run `ollama signin`, then use a name ending in `-cloud`, such as `gpt-oss:120b-cloud`. They run on Ollama's servers, but the browser still only calls Ollama on `localhost`, and the account stays in Ollama.
+4. Optional, cloud models: run `ollama signin`, then use a name ending in `-cloud`, such as `gpt-oss:20b-cloud` for the fast model and `gpt-oss:120b-cloud` for the writing model. They run on Ollama's servers, but the browser still only calls Ollama on `localhost`, and the account stays in Ollama.
 
 The page's Content Security Policy only allows `localhost` and `127.0.0.1` for Ollama, so a remote Ollama server isn't supported.
 
