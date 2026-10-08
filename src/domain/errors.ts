@@ -37,7 +37,7 @@ export function scrubSecret(text: string, secret: string | undefined): string {
 export class OllamaUnreachableError extends Error {
   constructor() {
     super(
-      "Couldn't reach Ollama. Check that it's running and was started with OLLAMA_ORIGINS set to this site's address.",
+      "Couldn't reach Ollama. Check that it's running and was started with OLLAMA_ORIGINS set to this site's address. Settings has a setup guide.",
     );
   }
 }
