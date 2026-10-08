@@ -194,7 +194,11 @@ Then build your own image. A prebuilt image from someone else carries their deta
 People can run the AI steps on [Ollama](https://ollama.com) instead of a Gemini key. Settings has a **Setup guide** with these steps and the exact commands for your address.
 
 1. Install and start Ollama.
-2. Allow the site: start Ollama with `OLLAMA_ORIGINS` set to the site's address, for example `OLLAMA_ORIGINS="https://tailor.example.com" ollama serve`. On the Mac app use `launchctl setenv OLLAMA_ORIGINS "<address>"` and restart it.
+2. Allow the site: Ollama must be started with `OLLAMA_ORIGINS` set to the site's address (`<address>` below, for example `https://tailor.example.com`).
+   - **macOS:** `launchctl setenv OLLAMA_ORIGINS "<address>"`, then quit and reopen the app.
+   - **Linux:** `sudo systemctl edit ollama`, add `[Service]` and `Environment="OLLAMA_ORIGINS=<address>"`, then `sudo systemctl restart ollama`.
+   - **Windows:** in PowerShell run `setx OLLAMA_ORIGINS "<address>"`, then quit Ollama from the tray icon and reopen it.
+   - Any system, from a terminal: `OLLAMA_ORIGINS="<address>" ollama serve`.
 3. Pull a model, such as `ollama pull qwen2.5:7b`, then enter its name in Settings and press Test connection. Models under about 7B often break the JSON the app needs.
 4. Optional, cloud models: run `ollama signin`, then use a name ending in `-cloud`, such as `gpt-oss:20b-cloud` for the fast model and `gpt-oss:120b-cloud` for the writing model. They run on Ollama's servers, but the browser still only calls Ollama on `localhost`, and the account stays in Ollama.
 

@@ -5,14 +5,31 @@ import { useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui";
 import { RECOMMENDED_MODELS } from "@/infrastructure/llm/ollamaConfig";
 
+type Os = "windows" | "macos" | "linux";
+const OSES: { id: Os; label: string }[] = [
+  { id: "windows", label: "Windows" },
+  { id: "macos", label: "macOS" },
+  { id: "linux", label: "Linux" },
+];
+
+// Preselects the tab for the computer the person is on; they can still switch.
+function detectOs(): Os {
+  const ua = navigator.userAgent;
+  if (/Windows/i.test(ua)) return "windows";
+  if (/Mac/i.test(ua)) return "macos";
+  return "linux";
+}
+
 // Explains the one-time Ollama setup. It uses the native <dialog>, like "Track a job".
 export function OllamaGuide() {
   const dialog = useRef<HTMLDialogElement>(null);
   // The address Ollama must allow: this site, as the browser sees it.
   const [origin, setOrigin] = useState("");
+  const [os, setOs] = useState<Os>("macos");
 
   function open() {
     setOrigin(window.location.origin);
+    setOs(detectOs());
     dialog.current?.showModal();
   }
 
@@ -48,31 +65,80 @@ export function OllamaGuide() {
             </button>
           </div>
 
+          <div role="tablist" aria-label="Operating system" className="flex gap-1 rounded-ui bg-sunken p-1 text-sm">
+            {OSES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={os === id}
+                onClick={() => setOs(id)}
+                className={`h-8 flex-1 rounded-ui ${os === id ? "bg-raised font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <Step n={1} title="Install Ollama">
-            <p>
-              Download it from{" "}
-              <a href="https://ollama.com/download" target="_blank" rel="noreferrer" className="text-accent underline">
-                ollama.com/download
-              </a>{" "}
-              and start it.
-            </p>
+            {os === "linux" ? (
+              <Command label="Run in a terminal" command="curl -fsSL https://ollama.com/install.sh | sh" />
+            ) : (
+              <p>
+                Download the {os === "windows" ? "Windows" : "macOS"} app from{" "}
+                <a
+                  href="https://ollama.com/download"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent underline"
+                >
+                  ollama.com/download
+                </a>{" "}
+                and start it.
+              </p>
+            )}
           </Step>
 
           <Step n={2} title="Allow this site (OLLAMA_ORIGINS)">
             <p>
-              Set <code className="font-mono">OLLAMA_ORIGINS</code> to <code className="font-mono">{origin}</code>, then
-              restart Ollama. Pick your setup:
+              Ollama must be started with <code className="font-mono">OLLAMA_ORIGINS</code> set to{" "}
+              <code className="font-mono">{origin}</code>.
             </p>
-            <Command label="Mac app" command={`launchctl setenv OLLAMA_ORIGINS "${origin}"`} />
-            <Command label="Terminal (Mac or Linux)" command={`OLLAMA_ORIGINS="${origin}" ollama serve`} />
-            <Command
-              label="Linux service: run `systemctl edit ollama`, add this, then `systemctl restart ollama`"
-              command={`[Service]\nEnvironment="OLLAMA_ORIGINS=${origin}"`}
-            />
-            <p className="text-faint">
-              Windows: add a user environment variable named <code className="font-mono">OLLAMA_ORIGINS</code> with
-              that value, then quit and reopen Ollama.
-            </p>
+            {os === "macos" ? (
+              <>
+                <Command
+                  label="Run in a terminal, then quit and reopen the Ollama app"
+                  command={`launchctl setenv OLLAMA_ORIGINS "${origin}"`}
+                />
+                <Command
+                  label="Or, if you start Ollama from a terminal"
+                  command={`OLLAMA_ORIGINS="${origin}" ollama serve`}
+                />
+              </>
+            ) : os === "linux" ? (
+              <>
+                <Command
+                  label="Run `sudo systemctl edit ollama`, add this, save"
+                  command={`[Service]\nEnvironment="OLLAMA_ORIGINS=${origin}"`}
+                />
+                <Command label="Then restart the service" command="sudo systemctl restart ollama" />
+                <Command
+                  label="Or, if you start Ollama from a terminal"
+                  command={`OLLAMA_ORIGINS="${origin}" ollama serve`}
+                />
+              </>
+            ) : (
+              <>
+                <Command
+                  label="Run in PowerShell, then quit Ollama from the tray icon and reopen it"
+                  command={`setx OLLAMA_ORIGINS "${origin}"`}
+                />
+                <p className="text-faint">
+                  Or open Settings, search for &quot;environment variables&quot;, and add a user variable named{" "}
+                  <code className="font-mono">OLLAMA_ORIGINS</code>.
+                </p>
+              </>
+            )}
           </Step>
 
           <Step n={3} title="Pick a model">
