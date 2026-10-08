@@ -23,6 +23,7 @@ This README is for running your own copy.
 - [3. Deploy](#3-deploy) (Docker Compose, Coolify, any container host)
 - [4. Make it yours (legal pages)](#4-make-it-yours-legal-pages)
 - [Running it](#running-it) (updates, backups, logs)
+- [Using Ollama instead of Gemini](#using-ollama-instead-of-gemini)
 - [Develop locally](#develop-locally)
 - [How it works](#how-it-works)
 - [License](#license)
@@ -187,6 +188,17 @@ Then build your own image. A prebuilt image from someone else carries their deta
 - **Logs:** the PDF cleanup logs `[retention] ...`. Gemini calls happen in the browser, so they never appear in server logs (the browser console shows model, tokens and duration at the debug level).
 - **Users:** open sign-up with `ALLOWED_EMAILS=*`, or list emails and restart to add or remove people. People can delete their own account and all its data in Settings.
 - **Cost:** on Gemini's free tier, nothing. On a paid key a resume costs a few cents. Each user pays for their own key.
+
+## Using Ollama instead of Gemini
+
+People can run the AI steps on [Ollama](https://ollama.com) instead of a Gemini key. Settings has a **Setup guide** with these steps and the exact commands for your address.
+
+1. Install and start Ollama.
+2. Allow the site: start Ollama with `OLLAMA_ORIGINS` set to the site's address, for example `OLLAMA_ORIGINS="https://tailor.example.com" ollama serve`. On the Mac app use `launchctl setenv OLLAMA_ORIGINS "<address>"` and restart it.
+3. Pull a model, such as `ollama pull qwen2.5:7b`, then enter its name in Settings and press Test connection. Models under about 7B often break the JSON the app needs.
+4. Optional, cloud models: run `ollama signin`, then use a name ending in `-cloud`, such as `gpt-oss:120b-cloud`. They run on Ollama's servers, but the browser still only calls Ollama on `localhost`, and the account stays in Ollama.
+
+The page's Content Security Policy only allows `localhost` and `127.0.0.1` for Ollama, so a remote Ollama server isn't supported.
 
 ## Develop locally
 
