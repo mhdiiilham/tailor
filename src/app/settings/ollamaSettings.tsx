@@ -9,6 +9,7 @@ import type { ModelTier } from "@/domain/ports";
 import { describeAiFailure } from "@/infrastructure/llm/geminiErrors";
 import { DEFAULT_OLLAMA_CONFIG } from "@/infrastructure/llm/ollamaConfig";
 import { OllamaLlm } from "@/infrastructure/llm/ollamaLlm";
+import { OllamaGuide } from "./ollamaGuide";
 
 const TIERS: { tier: ModelTier; label: string }[] = [
   { tier: "fast", label: "Fast model (reads the job, scores your fit)" },
@@ -53,12 +54,15 @@ export function OllamaSettings() {
       <SectionHeader
         icon={<Desktop size={18} />}
         title="Local model (Ollama)"
-        description="Use a model running on this computer instead of Gemini. Free and private, but slower and less accurate."
+        description="Use Ollama on this computer instead of Gemini, with a local model or an Ollama cloud model. Free, but needs a one-time setup."
       />
       {config === null ? (
         <Skeleton className="h-24" />
       ) : (
         <div className="grid gap-5 border-t border-line pt-5">
+          <div>
+            <OllamaGuide />
+          </div>
           <label className="flex cursor-pointer items-start gap-3 rounded-ui border border-line bg-sunken p-4 text-sm">
             <input
               type="checkbox"
@@ -69,8 +73,8 @@ export function OllamaSettings() {
             <span className="grid gap-0.5">
               <span className="font-medium">Use Ollama instead of Gemini</span>
               <span className="text-faint">
-                Start Ollama with <code className="font-mono">OLLAMA_ORIGINS={"<this site's address>"}</code> so the
-                browser is allowed to call it. Models of about 7B or larger work best.
+                Needs a one-time setup so the browser is allowed to call Ollama. Models of about 7B or larger work
+                best. See the setup guide.
               </span>
             </span>
           </label>
