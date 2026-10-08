@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_OLLAMA_CONFIG, resolveOllamaConfig } from "./ollamaConfig";
+import { DEFAULT_OLLAMA_CONFIG, RECOMMENDED_MODELS, resolveOllamaConfig } from "./ollamaConfig";
 
 describe("resolveOllamaConfig", () => {
   it("is off with the defaults when nothing is saved", () => {
@@ -37,5 +37,14 @@ describe("resolveOllamaConfig", () => {
 
   it("treats anything but true as off", () => {
     expect(resolveOllamaConfig(JSON.stringify({ enabled: "yes" })).enabled).toBe(false);
+  });
+});
+
+describe("RECOMMENDED_MODELS", () => {
+  it("are all accepted as model names", () => {
+    for (const { name } of RECOMMENDED_MODELS) {
+      const saved = JSON.stringify({ models: { fast: name, write: name } });
+      expect(resolveOllamaConfig(saved).models).toEqual({ fast: name, write: name });
+    }
   });
 });
