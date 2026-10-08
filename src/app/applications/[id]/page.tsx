@@ -17,6 +17,7 @@ import { NotesCard } from "./details";
 import { DeleteApplication } from "./deleteApplication";
 import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
+import { MissingKeywords } from "./missingKeywords";
 import { RequirementsList } from "./requirementsList";
 import { ScoreCard } from "./scoreCard";
 
@@ -255,6 +256,16 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
                   </li>
                 ))}
               </ul>
+            </Card>
+          ) : null}
+
+          {fit.missingKeywords && fit.missingKeywords.length > 0 ? (
+            <Card>
+              <SectionHeader
+                title="Keywords to cover"
+                description="What a recruiter or ATS looks for that your resume lacks or only weakly shows."
+              />
+              <MissingKeywords items={fit.missingKeywords} />
             </Card>
           ) : null}
 

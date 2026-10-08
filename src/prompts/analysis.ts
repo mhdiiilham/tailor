@@ -16,7 +16,10 @@ tag: 2-3 words naming how it matches (e.g. "Primary stack", "MariaDB ~ MySQL", "
 angles: the 2-3 concrete achievements from the profile that most directly match this role. For each give a short
 title, one or two sentences of evidence with real numbers from the profile, the company or project it comes from,
 and the job requirement it answers (quote the posting).
-blockers: required items the candidate clearly lacks. Be honest and specific.`;
+blockers: required items the candidate clearly lacks. Be honest and specific.
+missingKeywords: up to 10 keywords from the posting that a recruiter or ATS would look for and the profile lacks or shows only weakly, most important first. Use the posting's exact wording.
+Mark support HAVE or PARTIAL only when the profile backs it (whereToUse names the role or section it belongs in).
+Mark support MISSING when it does not. Never suggest adding a MISSING keyword to the resume.`;
 
 export const QUESTIONS_SYSTEM = `You write clarifying questions before a resume is tailored for a specific job.
 Two fixed questions are already asked (what to lead with, and tone). Write 2-4 MORE questions, based on the gap analysis.

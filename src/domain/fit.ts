@@ -20,6 +20,13 @@ export const AngleSchema = z.object({
 });
 export type Angle = z.infer<typeof AngleSchema>;
 
+export const MissingKeywordSchema = z.object({
+  keyword: z.string().describe("The keyword in the job posting's exact wording"),
+  support: MatchSchema.describe("HAVE or PARTIAL if the profile backs it, MISSING if it does not"),
+  whereToUse: z.string().describe("Where it belongs in the resume, or why it can't be used"),
+});
+export type MissingKeyword = z.infer<typeof MissingKeywordSchema>;
+
 // What the LLM judges. The score itself is computed in code (see fitScore).
 export const FitJudgementSchema = z.object({
   requirements: z.array(MatchedItemSchema),
@@ -29,6 +36,12 @@ export const FitJudgementSchema = z.object({
   domainFit: z.number().min(0).max(100).describe("Industry relevance, 0-100"),
   angles: z.array(AngleSchema).describe("The 2-3 profile achievements that best match this role"),
   blockers: z.array(z.string()).describe("Hard requirements the candidate clearly lacks"),
+  // Optional: analyses saved before this existed don't have it.
+  missingKeywords: z
+    .array(MissingKeywordSchema)
+    .max(10)
+    .optional()
+    .describe("Top posting keywords the resume lacks or only weakly shows, most important first"),
 });
 
 export type FitJudgement = z.infer<typeof FitJudgementSchema>;

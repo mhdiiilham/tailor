@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { coverage, fitScore, matchCounts, normalizeFit, type FitAnalysis, type FitJudgement } from "./fit";
+import {
+  coverage,
+  FitJudgementSchema,
+  fitScore,
+  matchCounts,
+  normalizeFit,
+  type FitAnalysis,
+  type FitJudgement,
+} from "./fit";
 
 const item = (match: "HAVE" | "PARTIAL" | "MISSING") => ({ item: "x", match, evidence: "", tag: "" });
 
@@ -60,5 +68,21 @@ describe("matchCounts", () => {
   it("counts requirements and stack items by match", () => {
     const fit = { ...judgement({ requirements: [item("HAVE"), item("MISSING")], techStack: [item("HAVE"), item("PARTIAL")] }), score: 0 };
     expect(matchCounts(fit)).toEqual({ HAVE: 2, PARTIAL: 1, MISSING: 1 });
+  });
+});
+
+describe("missingKeywords", () => {
+  it("is optional, so analyses saved before it existed still parse", () => {
+    expect(FitJudgementSchema.safeParse(judgement()).success).toBe(true);
+  });
+
+  it("accepts ranked keywords with their support", () => {
+    const keywords = [{ keyword: "Kubernetes", support: "PARTIAL", whereToUse: "Skills and the platform role" }];
+    expect(FitJudgementSchema.safeParse(judgement({ missingKeywords: keywords as never })).success).toBe(true);
+  });
+
+  it("caps the list so small local models stay within their output budget", () => {
+    const many = Array.from({ length: 11 }, (_, i) => ({ keyword: `k${i}`, support: "MISSING", whereToUse: "" }));
+    expect(FitJudgementSchema.safeParse(judgement({ missingKeywords: many as never })).success).toBe(false);
   });
 });
