@@ -12,8 +12,8 @@ import { OllamaLlm } from "@/infrastructure/llm/ollamaLlm";
 import { OllamaGuide } from "./ollamaGuide";
 
 const TIERS: { tier: ModelTier; label: string }[] = [
-  { tier: "fast", label: "Fast model (reads the job, scores your fit)" },
-  { tier: "write", label: "Writing model (resume and cover letter)" },
+  { tier: "fast", label: "Fast model (reads the job)" },
+  { tier: "write", label: "Writing model (fit, questions, resume and cover letter)" },
 ];
 
 // Optional: run the AI steps on Ollama on this computer instead of Gemini. The browser

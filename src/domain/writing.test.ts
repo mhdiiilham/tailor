@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { findBannedWords, findWritingTells, stripEmDashes, toPlainText } from "./writing";
+import {
+  findBannedWords,
+  findResumeTells,
+  findWeakOpeners,
+  findWritingTells,
+  stripEmDashes,
+  toPlainText,
+} from "./writing";
 
 describe("findBannedWords", () => {
   it("finds banned words including inflections", () => {
@@ -38,5 +45,34 @@ describe("toPlainText", () => {
     expect(toPlainText("  The “ledger” work — **fast** and it’s done  ")).toBe(
       "The \"ledger\" work, fast and it's done",
     );
+  });
+});
+
+describe("findResumeTells", () => {
+  it("finds banned words and resume cliches", () => {
+    const text = "Results-driven engineer with a proven track record who leveraged Go.";
+    expect(findResumeTells(text)).toEqual(["leverage", "results-driven", "proven track record"]);
+  });
+
+  it("ignores clean text", () => {
+    expect(findResumeTells("Cut API latency 90% by replacing sequential calls with goroutines")).toEqual([]);
+  });
+});
+
+describe("findWeakOpeners", () => {
+  it("flags bullets that open with a weak verb", () => {
+    const bullets = [
+      "Supported production tournament infrastructure",
+      "Handled a critical incident",
+      "Responsible for the billing service",
+      "Helped with the migration",
+      "Worked on search",
+      "Built the rules catalog",
+    ];
+    expect(findWeakOpeners(bullets)).toEqual(["Supported", "Handled", "Responsible for", "Helped with", "Worked on"]);
+  });
+
+  it("lists each weak opener once", () => {
+    expect(findWeakOpeners(["Supported a", "Supported b"])).toEqual(["Supported"]);
   });
 });

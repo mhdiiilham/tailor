@@ -19,6 +19,7 @@ import { ResumeViewer } from "./resumeViewer";
 import { QuestionsForm, ReviseForm } from "./forms";
 import { MissingKeywords } from "./missingKeywords";
 import { RequirementsList } from "./requirementsList";
+import { ResumeCoverage } from "./resumeCoverage";
 import { ScoreCard } from "./scoreCard";
 
 export const dynamic = "force-dynamic";
@@ -263,7 +264,7 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
             <Card>
               <SectionHeader
                 title="Keywords to cover"
-                description="What a recruiter or ATS looks for that your resume lacks or only weakly shows."
+                description="What a recruiter or ATS looks for that your profile lacks or only weakly shows."
               />
               <MissingKeywords items={fit.missingKeywords} />
             </Card>
@@ -307,6 +308,8 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
                   targetId="cover-letter"
                 />
               </section>
+
+              {app.resume ? <ResumeCoverage resume={app.resume} fit={fit} /> : null}
 
               {app.resume?.decisions.length ? (
                 <Card className="border-accent/30">

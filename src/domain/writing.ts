@@ -87,3 +87,31 @@ export function toPlainText(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .trim();
 }
+
+// Resume summary and bullet cliches that say nothing.
+export const RESUME_BANNED_PHRASES = [
+  "results-driven",
+  "proven track record",
+  "detail-oriented",
+  "team player",
+  "self-starter",
+  "strong communicator",
+  "seasoned professional",
+  "hard-working",
+];
+
+// Banned words plus resume cliches, all worth rewriting in a resume.
+export function findResumeTells(text: string): string[] {
+  const lower = text.toLowerCase();
+  return [...findBannedWords(text), ...RESUME_BANNED_PHRASES.filter((p) => lower.includes(p))];
+}
+
+// Openers that describe a duty, not an outcome.
+export const WEAK_OPENERS = ["Responsible for", "Helped with", "Worked on", "Supported", "Handled", "Assisted"];
+
+export function findWeakOpeners(bullets: string[]): string[] {
+  const found = bullets
+    .map((b) => WEAK_OPENERS.find((w) => b.trim().toLowerCase().startsWith(w.toLowerCase())))
+    .filter((w): w is string => w !== undefined);
+  return [...new Set(found)];
+}

@@ -1,25 +1,19 @@
 import { z } from "zod";
 import type { Application } from "@/domain/application";
 import { coverLetterText, CoverLetterSchema, type CoverLetterDraft } from "@/domain/coverLetter";
-import { FitJudgementSchema, fitScore, type FitAnalysis } from "@/domain/fit";
+import { FitJudgementSchema, fitScore, type FitAnalysis, type MatchedItem } from "@/domain/fit";
 import { JobPostingSchema, type JobPosting } from "@/domain/job";
 import type { LlmPort } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
-import {
-  FIXED_QUESTIONS,
-  MAX_GAP_QUESTIONS,
-  MAX_QUESTIONS,
-  NextQuestionSchema,
-  type Answers,
-  type NextQuestion,
-  type Question,
-} from "@/domain/questions";
+import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers, type Question } from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
-import { findBannedWords, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
-import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM, INTERVIEW_SYSTEM, QUESTIONS_SYSTEM } from "@/prompts/analysis";
-import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, TELLS_FIX } from "@/prompts/coverLetter";
+import { findUngroundedNumbers } from "@/domain/grounding";
+import { resumeSearchText } from "@/domain/keywordCoverage";
+import { findResumeTells, findWeakOpeners, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
+import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM } from "@/prompts/analysis";
+import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, NUMBERS_FIX, TELLS_FIX } from "@/prompts/coverLetter";
 import { profileContext } from "@/prompts/profileContext";
-import { BANNED_WORDS_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
+import { TAILOR_FIX, TAILOR_RESUME_SYSTEM } from "@/prompts/resume";
 
 // The AI steps of each use case. They run in the browser with the user's own Gemini key,
 // so they do no I/O of their own: the caller passes the data in and saves the result.
@@ -35,9 +29,16 @@ export type ApplicationContext = Pick<Application, "jdText" | "job" | "questions
 
 export type JobAnalysis = { company: string; role: string; job: JobPosting; fit: FitAnalysis; questions: Question[] };
 
-export const GapQuestionsSchema = z.object({ questions: z.array(z.string()).max(MAX_GAP_QUESTIONS) });
+// One call judges the fit and writes the questions about its gaps, so the profile is sent once.
+// gapQuestions comes last in the schema: the model has written the gaps by the time it asks.
+export const FitAndQuestionsSchema = FitJudgementSchema.extend({
+  gapQuestions: z.array(z.string()).max(MAX_GAP_QUESTIONS),
+});
 
 const noop: OnStep = () => {};
+
+// Judging the same posting twice should give nearly the same score.
+const JUDGE_TEMPERATURE = 0.2;
 
 // Paste a JD: extract it, score the fit, and prepare clarifying questions.
 export async function analyzeJob(
@@ -57,28 +58,22 @@ export async function analyzeJob(
   });
 
   onStep(1);
-  const judgement = await llm.generateObject({
-    tier: "fast",
-    schema: FitJudgementSchema,
+  const { gapQuestions, ...judgement } = await llm.generateObject({
+    // The fit decides the score and what the resume leads with, so it gets the stronger model.
+    tier: "write",
+    temperature: JUDGE_TEMPERATURE,
+    schema: FitAndQuestionsSchema,
     system: ANALYZE_FIT_SYSTEM,
     prompt: `JOB POSTING (structured):\n${JSON.stringify(job, null, 2)}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
   });
   const fit = { ...judgement, score: fitScore(judgement) };
-
-  onStep(2);
-  const gaps = await llm.generateObject({
-    tier: "fast",
-    schema: GapQuestionsSchema,
-    system: QUESTIONS_SYSTEM,
-    prompt: `JOB:\n${JSON.stringify(job, null, 2)}\n\nGAP ANALYSIS:\n${JSON.stringify(fit, null, 2)}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
-  });
 
   return {
     company: job.company || "Unknown company",
     role: job.role || "Unknown role",
     job,
     fit,
-    questions: assembleQuestions(gaps.questions),
+    questions: assembleQuestions(gapQuestions),
   };
 }
 
@@ -87,45 +82,6 @@ export function assembleQuestions(gaps: string[]): Question[] {
     ...FIXED_QUESTIONS,
     ...gaps.slice(0, MAX_GAP_QUESTIONS).map((question, i) => ({ id: `gap${i + 1}`, question })),
   ];
-}
-
-export type InterviewTurn = { question: string; answer: string };
-
-// The interview: one question at a time, each chosen from the answers so far.
-// The draft questions from analyzeJob are only a pool the model can draw on.
-export async function nextQuestion(
-  llm: LlmPort,
-  profile: Profile,
-  app: ApplicationContext,
-  turns: InterviewTurn[],
-  onStep: OnStep = noop,
-): Promise<NextQuestion> {
-  if (turns.length >= MAX_QUESTIONS) return { done: true };
-
-  onStep(0);
-  const next = await llm.generateObject({
-    tier: "fast",
-    schema: NextQuestionSchema,
-    system: INTERVIEW_SYSTEM,
-    prompt: [
-      `JOB POSTING (structured):\n${JSON.stringify(app.job, null, 2)}`,
-      `GAP ANALYSIS:\n${JSON.stringify(app.fit, null, 2)}`,
-      `CANDIDATE PROFILE:\n${profileContext(profile)}`,
-      `DRAFT QUESTION POOL:\n${app.questions.map((q) => `- ${q.question}`).join("\n")}`,
-      `ASKED SO FAR (${turns.length} of at most ${MAX_QUESTIONS}):\n${interviewLines(turns)}`,
-    ].join("\n\n"),
-  });
-
-  const question = next.question.trim();
-  const repeated = turns.some((t) => t.question.trim().toLowerCase() === question.toLowerCase());
-  return next.done || !question || repeated ? { done: true } : { done: false, question };
-}
-
-function interviewLines(turns: InterviewTurn[]): string {
-  if (turns.length === 0) return "(nothing yet)";
-  return turns
-    .map((t) => `Q: ${t.question}\nA: ${t.answer.trim() || "(skipped, candidate has no answer)"}`)
-    .join("\n\n");
 }
 
 // Answers in, tailored resume out (the server renders the PDF).
@@ -137,7 +93,7 @@ export async function tailorResume(
   onStep: OnStep = noop,
 ): Promise<TailoredResume> {
   const prompt = `${tailorContext(profile, app)}\n\nCANDIDATE'S ANSWERS TO CLARIFYING QUESTIONS:\n${qaLines(app, answers)}`;
-  return tailor(llm, profile, prompt, onStep);
+  return tailor(llm, profile, prompt, groundingSource(profile, Object.values(answers)), onStep);
 }
 
 // Free-text feedback on the current resume, e.g. "lead with the Pub/Sub work".
@@ -156,11 +112,11 @@ export async function reviseResume(
     `CURRENT RESUME:\n${JSON.stringify(app.resume, null, 2)}`,
     `REVISION REQUEST (change only what this asks, keep the rest):\n${feedback}`,
   ].join("\n\n");
-  return tailor(llm, profile, prompt, onStep);
+  return tailor(llm, profile, prompt, groundingSource(profile, [...Object.values(app.answers ?? {}), feedback]), onStep);
 }
 
-// A plain-text cover letter: drafted, run through a humanizer pass, then checked
-// for leftover AI phrasing (one more rewrite if any is found).
+// A plain-text cover letter: drafted with the humanizing rules already in the prompt, then
+// checked in code for leftover AI phrasing (one more rewrite only if any is found).
 export async function draftCoverLetter(
   llm: LlmPort,
   profile: Profile,
@@ -168,12 +124,12 @@ export async function draftCoverLetter(
   onStep: OnStep = noop,
 ): Promise<string> {
   if (!app.resume) throw new Error("Generate the resume before writing a cover letter.");
-  const context = `${tailorContext(profile, app)}\n\nTAILORED RESUME:\n${JSON.stringify(app.resume, null, 2)}\n\nCANDIDATE'S ANSWERS:\n${qaLines(app, app.answers ?? {})}`;
+  const context = `${tailorContext(profile, app)}\n\nTAILORED RESUME:\n${JSON.stringify(app.resume)}\n\nCANDIDATE'S ANSWERS:\n${qaLines(app, app.answers ?? {})}`;
   const asText = (d: CoverLetterDraft) => d.paragraphs.join("\n\n");
   const voice = `VOICE SAMPLE:\n${profile.writing_style.voice_sample || "(none)"}`;
 
   onStep(0);
-  const draft = await llm.generateObject({
+  let letter = await llm.generateObject({
     tier: "write",
     schema: CoverLetterSchema,
     system: COVER_LETTER_SYSTEM,
@@ -181,25 +137,36 @@ export async function draftCoverLetter(
   });
 
   onStep(1);
-  let letter = await llm.generateObject({
-    tier: "write",
-    schema: CoverLetterSchema,
-    system: HUMANIZE_SYSTEM,
-    prompt: `${voice}\n\nLETTER:\n${asText(draft)}`,
-  });
-
-  onStep(2);
   const tells = findWritingTells(asText(letter));
-  if (tells.length > 0) {
+  // Numbers may come from the profile, the answers or the resume (already checked).
+  const source = groundingSource(profile, [...Object.values(app.answers ?? {}), resumeSearchText(app.resume)]);
+  const invented = findUngroundedNumbers([asText(letter)], source);
+  if (tells.length > 0 || invented.length > 0) {
+    const fixes = [tells.length > 0 ? TELLS_FIX(tells) : "", invented.length > 0 ? NUMBERS_FIX(invented) : ""];
     letter = await llm.generateObject({
       tier: "write",
       schema: CoverLetterSchema,
       system: HUMANIZE_SYSTEM,
-      prompt: `${voice}\n\nLETTER:\n${asText(letter)}\n\n${TELLS_FIX(tells)}`,
+      prompt: `${voice}\n\nLETTER:\n${asText(letter)}\n\n${fixes.filter(Boolean).join("\n")}`,
     });
   }
 
   return coverLetterText({ paragraphs: letter.paragraphs.map(toPlainText) }, profile.personal.name);
+}
+
+// What the writing steps need from the fit: the verdicts, strongest angles, blockers and keywords.
+// Per-item evidence and tags are left out; the profile is in the prompt anyway.
+function compactFit(fit: FitAnalysis) {
+  const marks = (items: MatchedItem[]) => items.map((i) => ({ item: i.item, match: i.match }));
+  return {
+    score: fit.score,
+    requirements: marks(fit.requirements),
+    techStack: marks(fit.techStack),
+    niceToHaves: marks(fit.niceToHaves),
+    angles: fit.angles,
+    blockers: fit.blockers,
+    missingKeywords: fit.missingKeywords ?? [],
+  };
 }
 
 function qaLines(app: ApplicationContext, answers: Answers): string {
@@ -209,9 +176,8 @@ function qaLines(app: ApplicationContext, answers: Answers): string {
 function tailorContext(profile: Profile, app: ApplicationContext): string {
   const style = profile.writing_style;
   return [
-    `JOB POSTING (raw):\n${app.jdText}`,
-    `JOB POSTING (structured):\n${JSON.stringify(app.job, null, 2)}`,
-    `GAP ANALYSIS (score ${app.fit.score}/100):\n${JSON.stringify(app.fit, null, 2)}`,
+    `JOB POSTING (structured):\n${JSON.stringify(app.job)}`,
+    `GAP ANALYSIS:\n${JSON.stringify(compactFit(app.fit))}`,
     `CANDIDATE PROFILE:\n${profileContext(profile)}`,
     `VOICE SAMPLE:\n${style.voice_sample || "(none)"}`,
     `NEVER MENTION: ${style.avoid_mentioning.join("; ") || "(nothing)"}`,
@@ -219,7 +185,18 @@ function tailorContext(profile: Profile, app: ApplicationContext): string {
   ].join("\n\n");
 }
 
-async function tailor(llm: LlmPort, profile: Profile, prompt: string, onStep: OnStep): Promise<TailoredResume> {
+// Everything the candidate has told us. A number in a bullet must come from here.
+function groundingSource(profile: Profile, said: string[]): string {
+  return [profileContext(profile), ...said].join("\n");
+}
+
+async function tailor(
+  llm: LlmPort,
+  profile: Profile,
+  prompt: string,
+  source: string,
+  onStep: OnStep,
+): Promise<TailoredResume> {
   onStep(0);
   let resume = await llm.generateObject({
     tier: "write",
@@ -229,20 +206,40 @@ async function tailor(llm: LlmPort, profile: Profile, prompt: string, onStep: On
   });
 
   onStep(1);
-  const banned = findBannedWords(resumeText(resume));
-  if (banned.length > 0) {
+  const problems = resumeProblems(resume, source);
+  if (problems.length > 0) {
     resume = await llm.generateObject({
       tier: "write",
       schema: TailoredResumeSchema,
       system: TAILOR_RESUME_SYSTEM,
-      prompt: `${prompt}\n\nYOUR DRAFT:\n${JSON.stringify(resume, null, 2)}\n\n${BANNED_WORDS_FIX(banned)}`,
+      prompt: `${prompt}\n\nYOUR DRAFT:\n${JSON.stringify(resume, null, 2)}\n\n${TAILOR_FIX(problems)}`,
     });
   }
   return cleanResume(profile, resume);
 }
 
+// What code can catch in a draft: banned words and cliches, bullets that open with a duty, and invented numbers.
+function resumeProblems(r: TailoredResume, source: string): string[] {
+  const problems: string[] = [];
+  const tells = findResumeTells(resumeText(r));
+  if (tells.length > 0) problems.push(`Banned words and cliches to replace: ${tells.join(", ")}`);
+  const openers = findWeakOpeners(bulletsOf(r));
+  if (openers.length > 0) problems.push(`Bullets open with a weak verb, start with a strong one: ${openers.join(", ")}`);
+  const invented = findUngroundedNumbers(bulletsOf(r), source);
+  if (invented.length > 0) {
+    problems.push(
+      `Numbers not in the profile or the candidate's answers, remove them or use what the profile says: ${invented.join(", ")}`,
+    );
+  }
+  return problems;
+}
+
+function bulletsOf(r: TailoredResume): string[] {
+  return [...r.work.flatMap((w) => w.bullets), ...r.projects.flatMap((p) => p.bullets)];
+}
+
 function resumeText(r: TailoredResume): string {
-  return [r.summary, ...r.work.flatMap((w) => w.bullets), ...r.projects.flatMap((p) => p.bullets)].join("\n");
+  return [r.summary, ...bulletsOf(r)].join("\n");
 }
 
 // Guards against model mistakes the schema can't express: indexes outside the

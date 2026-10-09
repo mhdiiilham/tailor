@@ -10,12 +10,8 @@ import { cancelScrollToResult, requestScrollToResult } from "@/components/scroll
 import { useAiTask } from "@/components/useAiTask";
 import { Button, Card, FormMessage, PendingSteps, SectionHeader, SubmitButton } from "@/components/ui";
 
-// The three steps of draftCoverLetter, in order.
-const STEPS = [
-  "Drafting from your resume and the job description",
-  "Humanizing pass: removing AI-sounding phrasing",
-  "Final check for leftover clichés",
-];
+// The two steps of draftCoverLetter, in order.
+const STEPS = ["Drafting from your resume and the job description", "Checking for AI-sounding phrasing"];
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);

@@ -3,13 +3,11 @@ import type { FitJudgement } from "@/domain/fit";
 import type { JobPosting } from "@/domain/job";
 import { ProfileSchema } from "@/domain/profile";
 import type { TailoredResume } from "@/domain/resume";
-import { MAX_QUESTIONS } from "@/domain/questions";
 import { FakeLlm } from "@/infrastructure/llm/fakeLlm";
 import {
   analyzeJob,
   cleanResume,
   draftCoverLetter,
-  nextQuestion,
   reviseResume,
   tailorResume,
   type ApplicationContext,
@@ -75,8 +73,10 @@ const steps = () => {
 };
 
 describe("analyzeJob", () => {
-  it("extracts the job, scores fit in code, and adds gap questions after the fixed ones", async () => {
-    const llm = new FakeLlm([job, judgement, { questions: ["Kafka?", "Years?"] }]);
+  const analysis = (gapQuestions: string[]) => ({ ...judgement, gapQuestions });
+
+  it("extracts the job, then scores fit and writes gap questions in one call", async () => {
+    const llm = new FakeLlm([job, analysis(["Kafka?", "Years?"])]);
     const progress = steps();
 
     const out = await analyzeJob(llm, profile, "We need Go and Kafka", progress.onStep);
@@ -84,13 +84,50 @@ describe("analyzeJob", () => {
     expect(out.company).toBe("Acme");
     // 50*0.4 + 100*0.25 + 80*0.2 + 100*0.1 + 60*0.05 = 74
     expect(out.fit.score).toBe(74);
-    expect(out.questions.map((q) => q.id)).toEqual(["lead", "tone", "gap1", "gap2"]);
-    expect(llm.requests.every((r) => r.tier === "fast")).toBe(true);
-    expect(progress.seen).toEqual([0, 1, 2]);
+    expect(out.fit).not.toHaveProperty("gapQuestions");
+    expect(out.questions.map((q) => q.id)).toEqual(["lead", "gap1", "gap2"]);
+    expect(llm.requests).toHaveLength(2);
+    expect(progress.seen).toEqual([0, 1]);
+  });
+
+  it("reads the job on the fast model and judges the fit on the write model", async () => {
+    const llm = new FakeLlm([job, analysis([])]);
+
+    await analyzeJob(llm, profile, "jd");
+
+    expect(llm.requests.map((r) => r.tier)).toEqual(["fast", "write"]);
+  });
+
+  it("judges the fit at a low temperature with anchored scales", async () => {
+    const llm = new FakeLlm([job, analysis([])]);
+
+    await analyzeJob(llm, profile, "jd");
+
+    expect(llm.requests[1].temperature).toBe(0.2);
+    expect(llm.requests[1].system).toContain("90-100: same level and scope");
+    expect(llm.requests[1].system).toContain("Judge each tool once");
+    expect(llm.requests[0].temperature).toBeUndefined();
+  });
+
+  it("asks for at least one missing number among the gap questions", async () => {
+    const llm = new FakeLlm([job, analysis([])]);
+
+    await analyzeJob(llm, profile, "jd");
+
+    expect(llm.requests[1].system).toMatch(/at least one question .* missing number/i);
+  });
+
+  it("tells the extractor to skip benefits and boilerplate and how to read years", async () => {
+    const llm = new FakeLlm([job, analysis([])]);
+
+    await analyzeJob(llm, profile, "jd");
+
+    expect(llm.requests[0].system).toMatch(/Leave out benefits/);
+    expect(llm.requests[0].system).toMatch(/yearsRequired: the minimum years/);
   });
 
   it("names unknown companies and roles", async () => {
-    const llm = new FakeLlm([{ ...job, company: "", role: "" }, judgement, { questions: [] }]);
+    const llm = new FakeLlm([{ ...job, company: "", role: "" }, analysis([])]);
     const out = await analyzeJob(llm, profile, "jd");
     expect(out).toMatchObject({ company: "Unknown company", role: "Unknown role" });
   });
@@ -110,6 +147,20 @@ describe("tailorResume", () => {
     expect(progress.seen).toEqual([0, 1]);
   });
 
+  it("sends the structured job and a compact fit, not the raw posting or per-item evidence", async () => {
+    const llm = new FakeLlm([resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    const { prompt } = llm.requests[0];
+    expect(prompt).not.toContain("We need Go and Kafka");
+    expect(prompt).toContain("JOB POSTING (structured)");
+    expect(prompt).toContain('"Kafka"');
+    expect(prompt).not.toContain('"evidence"');
+    expect(prompt).toContain('"blockers"');
+    expect(prompt).toContain('"score":74');
+  });
+
   it("asks for X-Y-Z bullets and forbids inventing metrics or lacking skills", async () => {
     const llm = new FakeLlm([resume]);
 
@@ -121,13 +172,48 @@ describe("tailorResume", () => {
     expect(system).toContain("said they lack");
   });
 
+  it("asks once more when a bullet opens with a weak verb or the summary has a cliche", async () => {
+    const weak = {
+      ...resume,
+      summary: "Engineer with a proven track record.",
+      work: [{ experienceIndex: 0, bullets: ["Supported the queue platform"] }],
+    };
+    const llm = new FakeLlm([weak, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/Banned words and cliches to replace: proven track record/);
+    expect(llm.requests[1].prompt).toMatch(/weak verb, start with a strong one: Supported/);
+  });
+
+  it("asks once more when a bullet has a number the profile and answers never state", async () => {
+    const invented = { ...resume, work: [{ experienceIndex: 0, bullets: ["Cut errors 75% across 17 services"] }] };
+    const llm = new FakeLlm([invented, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/Numbers not in the profile or the candidate's answers.*: 75, 17/);
+  });
+
+  it("accepts numbers from the profile or from the candidate's answers", async () => {
+    const grounded = {
+      ...resume,
+      work: [{ experienceIndex: 1, bullets: ["Cut latency 90% and handled 5,000 events a second"] }],
+    };
+    const llm = new FakeLlm([grounded]);
+
+    await tailorResume(llm, profile, app, { lead: "We peaked at 5000 events a second" });
+
+    expect(llm.requests).toHaveLength(1);
+  });
+
   it("asks once more when the draft uses banned words", async () => {
     const sloppy = { ...resume, summary: "A passionate engineer who will leverage Go." };
     const llm = new FakeLlm([sloppy, resume]);
 
     const out = await tailorResume(llm, profile, app, {});
 
-    expect(llm.requests[1].prompt).toMatch(/banned words: leverage, passionate/);
+    expect(llm.requests[1].prompt).toMatch(/Banned words and cliches to replace: leverage, passionate/);
     expect(out.summary).toBe("Backend engineer, Go.");
   });
 });
@@ -182,9 +268,8 @@ describe("draftCoverLetter", () => {
   const letter = (...paragraphs: string[]) => ({ paragraphs });
   const withResume = { ...app, resume };
 
-  it("drafts, runs the humanizer pass, and returns plain text with a sign-off", async () => {
+  it("drafts in one call, checks it, and returns plain text with a sign-off", async () => {
     const llm = new FakeLlm([
-      letter("Draft one.", "Draft two.", "Draft three."),
       letter(
         "Your ledger work caught my eye — it’s close to mine.",
         "I cut reconciliation to 12 minutes.",
@@ -195,24 +280,54 @@ describe("draftCoverLetter", () => {
 
     const text = await draftCoverLetter(llm, profile, withResume, progress.onStep);
 
-    expect(llm.requests.map((r) => r.system.slice(0, 20))).toEqual(["You write a cover le", "You edit a cover let"]);
-    expect(llm.requests[1].prompt).toContain("Draft one.");
+    expect(llm.requests).toHaveLength(1);
+    expect(llm.requests[0].tier).toBe("write");
     expect(text).toBe(
       "Your ledger work caught my eye, it's close to mine.\n\nI cut reconciliation to 12 minutes.\n\nHappy to talk through it.\n\nBest regards,\nAda",
     );
-    expect(progress.seen).toEqual([0, 1, 2]);
+    expect(progress.seen).toEqual([0, 1]);
   });
 
-  it("asks for one more rewrite when AI phrasing survives the humanizer", async () => {
+  it("puts the humanizing rules in the draft prompt", async () => {
+    const llm = new FakeLlm([letter("a", "b", "c")]);
+
+    await draftCoverLetter(llm, profile, withResume);
+
+    expect(llm.requests[0].system).toContain("these AI writing patterns");
+    expect(llm.requests[0].system).toContain("give it a pulse");
+  });
+
+  it("asks for one more rewrite when the letter has a number nobody gave us", async () => {
     const llm = new FakeLlm([
-      letter("a", "b", "c"),
+      letter("Your ledger work caught my eye.", "I cut costs 83% in a quarter.", "Let's talk."),
+      letter("Your ledger work caught my eye.", "I cut reconciliation to 12 minutes.", "Let's talk."),
+    ]);
+
+    await draftCoverLetter(llm, profile, withResume);
+
+    expect(llm.requests).toHaveLength(2);
+    expect(llm.requests[1].prompt).toMatch(/Numbers not in the profile, resume or answers.*: 83/);
+  });
+
+  it("accepts numbers from the answers", async () => {
+    const llm = new FakeLlm([letter("a", "We served 4500 users.", "c")]);
+
+    await draftCoverLetter(llm, profile, { ...withResume, answers: { lead: "4,500 users" } });
+
+    expect(llm.requests).toHaveLength(1);
+  });
+
+  it("asks for one more rewrite only when AI phrasing is found", async () => {
+    const llm = new FakeLlm([
       letter("I am writing to express interest.", "A pivotal role.", "Thanks."),
       letter("Your ledger work caught my eye.", "I cut it to 12 minutes.", "Let's talk."),
     ]);
 
     const text = await draftCoverLetter(llm, profile, withResume);
 
-    expect(llm.requests[2].prompt).toMatch(/still contains: pivotal, i am writing to express/);
+    expect(llm.requests).toHaveLength(2);
+    expect(llm.requests[1].system.slice(0, 20)).toBe("You edit a cover let");
+    expect(llm.requests[1].prompt).toMatch(/still contains: pivotal, i am writing to express/);
     expect(text).toContain("Your ledger work caught my eye.");
   });
 
@@ -221,44 +336,3 @@ describe("draftCoverLetter", () => {
   });
 });
 
-describe("nextQuestion", () => {
-  const turn = (question: string, answer: string) => ({ question, answer });
-
-  it("asks the fast model and passes every earlier answer, so the next question can adapt", async () => {
-    const llm = new FakeLlm([{ done: false, question: "How many events per second?" }]);
-
-    const out = await nextQuestion(llm, profile, app, [turn("Lead with?", "The Kafka migration")]);
-
-    expect(out).toEqual({ done: false, question: "How many events per second?" });
-    expect(llm.requests[0].tier).toBe("fast");
-    expect(llm.requests[0].prompt).toContain("Q: Lead with?\nA: The Kafka migration");
-    expect(llm.requests[0].prompt).toContain("Backend Engineer");
-  });
-
-  it("marks a skipped question so it is never asked or written again", async () => {
-    const llm = new FakeLlm([{ done: false, question: "Anything else?" }]);
-
-    await nextQuestion(llm, profile, app, [turn("Have you used Kafka?", "")]);
-
-    expect(llm.requests[0].prompt).toContain("Q: Have you used Kafka?\nA: (skipped, candidate has no answer)");
-  });
-
-  it("stops without calling the model once the question cap is reached", async () => {
-    const llm = new FakeLlm([]);
-    const turns = Array.from({ length: MAX_QUESTIONS }, (_, i) => turn(`Q${i}`, "a"));
-
-    expect(await nextQuestion(llm, profile, app, turns)).toEqual({ done: true });
-    expect(llm.requests).toHaveLength(0);
-  });
-
-  it("is done when the model says so or returns a blank question", async () => {
-    expect(await nextQuestion(new FakeLlm([{ done: true, question: "" }]), profile, app, [])).toEqual({ done: true });
-    expect(await nextQuestion(new FakeLlm([{ done: false, question: "  " }]), profile, app, [])).toEqual({ done: true });
-  });
-
-  it("is done instead of repeating a question that was already asked", async () => {
-    const llm = new FakeLlm([{ done: false, question: " lead with? " }]);
-
-    expect(await nextQuestion(llm, profile, app, [turn("Lead with?", "x")])).toEqual({ done: true });
-  });
-});

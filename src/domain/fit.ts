@@ -41,7 +41,7 @@ export const FitJudgementSchema = z.object({
     .array(MissingKeywordSchema)
     .max(10)
     .optional()
-    .describe("Top posting keywords the resume lacks or only weakly shows, most important first"),
+    .describe("Top posting keywords the profile lacks or only weakly shows, most important first"),
 });
 
 export type FitJudgement = z.infer<typeof FitJudgementSchema>;

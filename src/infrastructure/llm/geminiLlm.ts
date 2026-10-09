@@ -32,7 +32,7 @@ export class GeminiLlm implements LlmPort {
     this.models = { fast: google(models.fast), write: google(models.write) };
   }
 
-  async generateObject<T>({ tier, schema, system, prompt }: GenerateObjectRequest<T>): Promise<T> {
+  async generateObject<T>({ tier, schema, system, prompt, temperature }: GenerateObjectRequest<T>): Promise<T> {
     const started = Date.now();
     try {
       const result = await generateText({
@@ -40,6 +40,7 @@ export class GeminiLlm implements LlmPort {
         output: Output.object({ schema }),
         system,
         prompt,
+        temperature,
         // Free-tier keys hit per-minute limits; the SDK backs off and honours retry-after.
         maxRetries: 4,
       });

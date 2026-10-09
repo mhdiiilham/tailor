@@ -13,6 +13,8 @@ export type GenerateObjectRequest<T> = {
   schema: z.ZodType<T>;
   system: string;
   prompt: string;
+  // Lower for judging (same input, same answer), left unset for writing.
+  temperature?: number;
 };
 
 export interface LlmPort {

@@ -13,12 +13,12 @@ const TIERS: { tier: ModelTier; label: string; detail: string }[] = [
   {
     tier: "fast",
     label: "Fast model",
-    detail: "Reads the job description, scores your fit and writes the questions. Three calls per application.",
+    detail: "Reads the job description. One short call per application.",
   },
   {
     tier: "write",
     label: "Writing model",
-    detail: "Writes and revises the resume and the cover letter.",
+    detail: "Scores your fit and writes the questions, then writes and revises the resume and the cover letter.",
   },
 ];
 
