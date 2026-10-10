@@ -43,3 +43,6 @@ next-env.d.ts
 # local database
 /data
 !.env.example
+
+# generated resumes saved while testing
+/*.pdf
