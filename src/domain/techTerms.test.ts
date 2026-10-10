@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProfileSchema } from "./profile";
-import { checkTerms, looksComplete, profileTerms } from "./techTerms";
+import { checkTerms, findUnbackedTerms, looksComplete, profileTerms } from "./techTerms";
 
 const profile = ProfileSchema.parse({
   personal: { name: "Ada" },
@@ -40,5 +40,21 @@ describe("looksComplete", () => {
     expect(looksComplete("Backend engineer")).toEqual({ tooShort: true, noRequirements: true });
     expect(looksComplete("x".repeat(200) + " Requirements: Go").tooShort).toBe(false);
     expect(looksComplete("x".repeat(200) + " Requirements: Go").noRequirements).toBe(false);
+  });
+});
+
+describe("findUnbackedTerms", () => {
+  const source = "Ran Go services on K8s with gRPC. Migrated a Rails monolith.";
+
+  it("flags a tech term the source never mentions", () => {
+    expect(findUnbackedTerms("Ran Go services and provisioned them with Terraform", source)).toEqual(["Terraform"]);
+  });
+
+  it("treats spellings of the same thing as one", () => {
+    expect(findUnbackedTerms("Operated Kubernetes clusters over gRPC", source)).toEqual([]);
+  });
+
+  it("ignores a plain verb that is not a tech term", () => {
+    expect(findUnbackedTerms("Let the team go home early", source)).toEqual([]);
   });
 });

@@ -69,6 +69,13 @@ export function checkTerms(jd: string, profileTermList: string[]): TermCheck {
   return { inProfile, notInProfile };
 }
 
+// Tech terms a bullet names that its own source never mentions, e.g. "Terraform" in a role
+// whose highlights don't. Spellings that mean the same thing (k8s, Kubernetes) count as one.
+export function findUnbackedTerms(text: string, source: string): string[] {
+  const backed = new Set(checkTerms(source, []).notInProfile.map(canonical));
+  return checkTerms(text, []).notInProfile.filter((t) => !backed.has(canonical(t)));
+}
+
 // Rough size check so obviously incomplete pastes are caught before spending a call.
 export function looksComplete(jd: string): { tooShort: boolean; noRequirements: boolean } {
   return {

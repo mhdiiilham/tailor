@@ -26,3 +26,32 @@ export function findUngroundedNumbers(bullets: string[], source: string): string
   }
   return missing;
 }
+
+// Claims the model tends to add on its own. Each one must be in the source to stay in a bullet.
+export const UNSUPPORTED_CLAIM_PHRASES = [
+  "without downtime",
+  "zero downtime",
+  "zero-downtime",
+  "high availability",
+  "fault tolerance",
+  "deployment velocity",
+  "developer productivity",
+];
+
+// Work status a resume must never claim unless the candidate said it. A wrong one ends the process.
+export const WORK_STATUS_PHRASES = [
+  "right to work",
+  "work permit",
+  "authorized to work",
+  "authorised to work",
+  "no sponsorship",
+  "without sponsorship",
+  "citizen",
+  "permanent resident",
+];
+
+export function findUngroundedClaims(text: string, source: string, phrases = UNSUPPORTED_CLAIM_PHRASES): string[] {
+  const lower = text.toLowerCase();
+  const known = source.toLowerCase();
+  return phrases.filter((p) => lower.includes(p) && !known.includes(p));
+}

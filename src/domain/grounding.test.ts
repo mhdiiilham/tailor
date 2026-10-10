@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findUngroundedNumbers, numbersIn } from "./grounding";
+import { findUngroundedClaims, findUngroundedNumbers, numbersIn, WORK_STATUS_PHRASES } from "./grounding";
 
 describe("numbersIn", () => {
   it("normalizes commas, decimals, plus signs and K/M suffixes", () => {
@@ -30,5 +30,24 @@ describe("findUngroundedNumbers", () => {
 
   it("lists each number once", () => {
     expect(findUngroundedNumbers(["Cut 75%", "Improved 75%"], source)).toEqual(["75"]);
+  });
+});
+
+describe("findUngroundedClaims", () => {
+  it("flags a claim phrase the source never states", () => {
+    expect(findUngroundedClaims("Migrated the monolith without downtime", "Migrated a Rails monolith to Go")).toEqual([
+      "without downtime",
+    ]);
+  });
+
+  it("checks a given list of phrases, such as work status", () => {
+    const source = "Based in Jakarta. Open to relocation with visa sponsorship.";
+    expect(findUngroundedClaims("Relocating to London with the right to work", source, WORK_STATUS_PHRASES)).toEqual([
+      "right to work",
+    ]);
+  });
+
+  it("accepts a claim the source states", () => {
+    expect(findUngroundedClaims("Kept high availability", "Responsible for high availability")).toEqual([]);
   });
 });
