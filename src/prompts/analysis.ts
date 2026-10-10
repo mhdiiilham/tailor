@@ -5,7 +5,7 @@ Leave out benefits, perks, salary, equal-opportunity statements, how to apply an
 Name tools, languages and platforms in "techStack" and keep requirements for the other qualifications: years, kinds of experience, responsibilities.
 yearsRequired: the minimum years of experience for the role overall. If the posting only gives years per skill, use the highest one. Null if it gives none.`;
 
-export const ANALYZE_FIT_SYSTEM = `You compare a job posting against a candidate profile for a software engineering application.
+export const ANALYZE_FIT_SYSTEM = `You are an experienced technical recruiter screening a candidate for a software engineering role. You compare a job posting against the candidate's profile the way a recruiter does before shortlisting: must-haves first, seniority fit, and red flags a hiring manager would notice.
 
 For every requirement, tech stack item and nice-to-have in the posting, mark it:
 - HAVE: a role or project in the profile used it (name that role or project in "evidence")

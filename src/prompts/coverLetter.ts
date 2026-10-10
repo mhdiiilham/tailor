@@ -19,7 +19,7 @@ Then give it a pulse:
 - Match the candidate's voice sample.`;
 
 // Adapted from the /tailored skill's cover letter rules.
-export const COVER_LETTER_SYSTEM = `You write a cover letter for a software engineering job, in the candidate's own voice.
+export const COVER_LETTER_SYSTEM = `You write a cover letter for a software engineering job, in the candidate's own voice. You know what recruiters skim a letter for: a specific hook, one proven result, a clear ask.
 
 Hard rules:
 - Use only facts from the candidate's profile, the tailored resume and their answers. Never invent experience, numbers, tools or reasons.
