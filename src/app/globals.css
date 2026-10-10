@@ -72,8 +72,9 @@ body {
   color: var(--ink);
 }
 
+/* accent-soft is too close to the surface to read as a highlight in either theme. */
 ::selection {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* Indeterminate progress bar for PendingSteps. */
