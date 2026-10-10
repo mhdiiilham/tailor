@@ -51,7 +51,18 @@ describe("toPlainText", () => {
 describe("findResumeTells", () => {
   it("finds banned words and resume cliches", () => {
     const text = "Results-driven engineer with a proven track record who leveraged Go.";
-    expect(findResumeTells(text)).toEqual(["leverage", "results-driven", "proven track record"]);
+    expect(findResumeTells(text)).toEqual(["leverage", "results-driven", "proven"]);
+  });
+
+  it("finds AI-sounding words in any form", () => {
+    const text = "Engineered a resilient service, enhancing modularity. Architected pipelines to showcase growth.";
+    expect(findResumeTells(text)).toEqual(
+      expect.arrayContaining(["engineered", "resilient", "enhancing", "architected", "showcase"]),
+    );
+  });
+
+  it("finds a value clause tacked on after a comma", () => {
+    expect(findResumeTells("Migrated 50 endpoints to Go, ensuring reliability")).toContain('", ensuring ..." tacked on');
   });
 
   it("ignores clean text", () => {

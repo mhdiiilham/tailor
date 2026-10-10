@@ -91,7 +91,8 @@ export function toPlainText(text: string): string {
 // Resume summary and bullet cliches that say nothing.
 export const RESUME_BANNED_PHRASES = [
   "results-driven",
-  "proven track record",
+  // Any "proven ..." claim: track record, background, ability.
+  "proven",
   "detail-oriented",
   "team player",
   "self-starter",
@@ -100,10 +101,42 @@ export const RESUME_BANNED_PHRASES = [
   "hard-working",
 ];
 
-// Banned words plus resume cliches, all worth rewriting in a resume.
+// Word stems that make a resume read as AI-written ("enhanc" catches enhance, enhancing, enhanced).
+export const RESUME_AI_STEMS = [
+  "engineered",
+  "architected",
+  "constructed",
+  "resilient",
+  "safeguard",
+  "gracefully",
+  "enhanc",
+  "streamlin",
+  "empower",
+  "elevat",
+  "bolster",
+  "harness",
+  "seamless",
+  "slashing",
+  "instantaneous",
+];
+
+// A clause tacked on after a comma that restates value instead of a fact
+// (", enhancing modularity", ", ensuring reliability").
+const FILLER_TAIL = /,\s+(enhancing|ensuring|driving|boosting|empowering|fostering|showcasing|highlighting|underscoring)\b/g;
+
+// Banned words, AI vocabulary, AI-sounding stems, filler tails and resume cliches: all worth rewriting.
 export function findResumeTells(text: string): string[] {
   const lower = text.toLowerCase();
-  return [...findBannedWords(text), ...RESUME_BANNED_PHRASES.filter((p) => lower.includes(p))];
+  const stems = [...AI_VOCABULARY, ...RESUME_AI_STEMS].flatMap((s) => lower.match(new RegExp(`\\b${s}\\w*`, "g")) ?? []);
+  const tails = [...lower.matchAll(FILLER_TAIL)].map((m) => `", ${m[1]} ..." tacked on`);
+  return [
+    ...new Set([
+      ...findBannedWords(text),
+      ...stems,
+      ...tails,
+      ...RESUME_BANNED_PHRASES.filter((p) => lower.includes(p)),
+    ]),
+  ];
 }
 
 // Openers that describe a duty, not an outcome.
