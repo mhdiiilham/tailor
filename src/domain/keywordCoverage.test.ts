@@ -56,6 +56,7 @@ describe("resumeSearchText", () => {
       work: [{ experienceIndex: 0, bullets: ["Built queues"] }],
       projects: [{ projectIndex: 0, bullets: ["Wrote a parser"] }],
       skills: [{ category: "Languages", items: ["Go", "SQL"] }],
+      availability: "",
       decisions: [],
     };
     const text = resumeSearchText(r);

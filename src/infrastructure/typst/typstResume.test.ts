@@ -20,6 +20,7 @@ const resume: TailoredResume = {
   work: [{ experienceIndex: 0, bullets: ["Cut latency by 90% (~2s to 200ms)", "Wrote docs — lots"] }],
   projects: [{ projectIndex: 0, bullets: ["Built it in Go"] }],
   skills: [{ category: "Languages", items: ["Go", "C#"] }],
+  availability: "",
   decisions: [],
 };
 
@@ -55,6 +56,16 @@ describe("renderResumeTypst", () => {
     expect(out).toContain('#let name = "Ada Lovelace"');
     expect(out).toContain('#let email = "ada@example.com"');
     expect(out).toContain("_Based in London (UTC+0)._");
+  });
+
+  it("prints the availability line tailored for the job over the profile's", () => {
+    const tailored = renderResumeTypst(profile, { ...resume, availability: "Relocating to Berlin." });
+    expect(tailored).toContain("_Relocating to Berlin._");
+    expect(tailored).not.toContain("Based in London");
+  });
+
+  it("falls back to the profile's availability line when none is tailored", () => {
+    expect(renderResumeTypst(profile, { ...resume, availability: "" })).toContain("_Based in London (UTC+0)._");
   });
 
   it("takes title, company and dates from the profile, not the LLM", () => {

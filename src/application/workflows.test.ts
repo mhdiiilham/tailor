@@ -3,6 +3,7 @@ import type { FitJudgement } from "@/domain/fit";
 import type { JobPosting } from "@/domain/job";
 import { ProfileSchema } from "@/domain/profile";
 import type { TailoredResume } from "@/domain/resume";
+import { yearsOfExperience } from "@/domain/years";
 import { FakeLlm } from "@/infrastructure/llm/fakeLlm";
 import {
   analyzeJob,
@@ -52,6 +53,7 @@ const resume: TailoredResume = {
   work: [{ experienceIndex: 0, bullets: ["Built queues"] }],
   projects: [],
   skills: [{ category: "Languages", items: ["Go"] }],
+  availability: "",
   decisions: [],
 };
 
@@ -182,7 +184,7 @@ describe("tailorResume", () => {
 
     await tailorResume(llm, profile, app, {});
 
-    expect(llm.requests[1].prompt).toMatch(/Banned words and cliches to replace: proven track record/);
+    expect(llm.requests[1].prompt).toMatch(/Banned words and cliches to replace: proven/);
     expect(llm.requests[1].prompt).toMatch(/weak verb, start with a strong one: Supported/);
   });
 
@@ -203,6 +205,72 @@ describe("tailorResume", () => {
     const llm = new FakeLlm([grounded]);
 
     await tailorResume(llm, profile, app, { lead: "We peaked at 5000 events a second" });
+
+    expect(llm.requests).toHaveLength(1);
+  });
+
+  it("gives the computed years and the availability line to the model", async () => {
+    const llm = new FakeLlm([resume]);
+
+    await tailorResume(llm, { ...profile, availability: "Based in Lisbon. Open to relocation." }, app, {});
+
+    expect(llm.requests[0].prompt).toMatch(/YEARS OF EXPERIENCE \(from the role dates.*\): \d+/);
+    expect(llm.requests[0].prompt).toContain("AVAILABILITY:\nBased in Lisbon. Open to relocation.");
+  });
+
+  it("asks once more when the summary claims more years than the role dates give", async () => {
+    const inflated = { ...resume, summary: "Backend engineer with 40+ years of Go." };
+    const llm = new FakeLlm([inflated, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/The summary claims 40 years, but the roles on this resume only cover \d+/);
+  });
+
+  it("asks to keep older roles when the summary's years need them", async () => {
+    const all = yearsOfExperience(profile.experience, new Date());
+    const shown = yearsOfExperience([profile.experience[0]], new Date());
+    const short = { ...resume, summary: `Backend engineer with ${all}+ years of Go.` };
+    const llm = new FakeLlm([short, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toContain(`the roles on this resume only cover ${shown} (all roles give ${all})`);
+    expect(llm.requests[1].prompt).toContain("Keep the older roles");
+  });
+
+  it("asks once more when the availability line claims a work status nobody gave", async () => {
+    const claimed = { ...resume, availability: "Based in Lisbon with the right to work in the UK." };
+    const llm = new FakeLlm([claimed, resume]);
+
+    await tailorResume(llm, { ...profile, availability: "Based in Lisbon." }, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/availability line claims what the candidate never said.*right to work/);
+  });
+
+  it("asks once more when a bullet names a tool its own role never states", async () => {
+    const borrowed = { ...resume, work: [{ experienceIndex: 0, bullets: ["Built queues provisioned with Terraform"] }] };
+    const llm = new FakeLlm([borrowed, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/does not state.*"Terraform" in New Co/);
+  });
+
+  it("asks once more when a bullet adds a claim the role never states", async () => {
+    const claimed = { ...resume, work: [{ experienceIndex: 0, bullets: ["Built queues without downtime"] }] };
+    const llm = new FakeLlm([claimed, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/"without downtime" in New Co/);
+  });
+
+  it("accepts a tool the candidate named in their answers", async () => {
+    const borrowed = { ...resume, work: [{ experienceIndex: 0, bullets: ["Built queues provisioned with Terraform"] }] };
+    const llm = new FakeLlm([borrowed]);
+
+    await tailorResume(llm, profile, app, { lead: "At New Co I wrote the Terraform for the queues" });
 
     expect(llm.requests).toHaveLength(1);
   });
@@ -257,6 +325,11 @@ describe("cleanResume", () => {
     expect(out.work.map((w) => w.experienceIndex)).toEqual([0, 1]);
     expect(out.work[1].bullets).toEqual(["b"]);
     expect(out.projects).toEqual([]);
+  });
+
+  it("keeps the tailored availability line", () => {
+    const out = cleanResume(profile, { ...resume, availability: "Relocating to London — needs a visa. " });
+    expect(out.availability).toBe("Relocating to London, needs a visa.");
   });
 
   it("fails when no valid role is left", () => {

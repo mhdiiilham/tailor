@@ -46,6 +46,7 @@ const resume: TailoredResume = {
   work: [{ experienceIndex: 0, bullets: ["Built queues"] }],
   projects: [],
   skills: [{ category: "Languages", items: ["Go"] }],
+  availability: "",
   decisions: [],
 };
 

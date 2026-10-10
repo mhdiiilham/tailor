@@ -25,6 +25,7 @@ describe.skipIf(!hasTypst)("TypstResumeRenderer", () => {
         work: [{ experienceIndex: 0, bullets: ["Cut p99 by 50% [~2s] #wins $0 *cost*"] }],
         projects: [],
         skills: [{ category: "Languages", items: ["Go"] }],
+        availability: "",
         decisions: [],
       },
     });
@@ -45,6 +46,7 @@ describe.skipIf(!hasTypst)("TypstResumeRenderer", () => {
         work: [{ experienceIndex: 0, bullets: ["Shipped things."] }],
         projects: [],
         skills: [],
+        availability: "",
         decisions: [],
       },
     });

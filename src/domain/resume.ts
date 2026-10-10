@@ -26,6 +26,10 @@ export const TailoredResumeSchema = z.object({
       items: z.array(z.string()).min(1),
     }),
   ),
+  // Required so the model always writes it; an optional field tends to come back empty.
+  availability: z
+    .string()
+    .describe("The candidate's AVAILABILITY line rewritten for this job's location and work mode"),
   decisions: z
     .array(z.string())
     .describe("Short notes on what was emphasized, cut, and which JD keywords were surfaced where"),

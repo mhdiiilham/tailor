@@ -115,7 +115,9 @@ function skills(p: Profile, r: TailoredResume): string {
 
 export function renderResumeTypst(profile: Profile, resume: TailoredResume): string {
   const sections = [header(profile)];
-  if (profile.availability) sections.push(`_${escapeMarkup(profile.availability)}_`);
+  // The line tailored for this job; resumes saved before it existed fall back to the profile's.
+  const availability = resume.availability?.trim() || profile.availability;
+  if (availability) sections.push(`_${escapeMarkup(availability)}_`);
   if (resume.summary.trim()) sections.push(`== Summary\n\n${escapeMarkup(resume.summary.trim())}`);
   sections.push(`== Work Experience\n\n${work(profile, resume)}`);
   if (resume.projects.length > 0) sections.push(`== Projects\n\n${projects(profile, resume)}`);

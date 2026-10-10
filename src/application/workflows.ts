@@ -7,8 +7,10 @@ import type { LlmPort } from "@/domain/ports";
 import type { Profile } from "@/domain/profile";
 import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers, type Question } from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
-import { findUngroundedNumbers } from "@/domain/grounding";
+import { findUngroundedClaims, findUngroundedNumbers, WORK_STATUS_PHRASES } from "@/domain/grounding";
 import { resumeSearchText } from "@/domain/keywordCoverage";
+import { findUnbackedTerms } from "@/domain/techTerms";
+import { yearsClaimed, yearsOfExperience } from "@/domain/years";
 import { findResumeTells, findWeakOpeners, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
 import { ANALYZE_FIT_SYSTEM, EXTRACT_JOB_SYSTEM } from "@/prompts/analysis";
 import { COVER_LETTER_SYSTEM, HUMANIZE_SYSTEM, NUMBERS_FIX, TELLS_FIX } from "@/prompts/coverLetter";
@@ -93,7 +95,7 @@ export async function tailorResume(
   onStep: OnStep = noop,
 ): Promise<TailoredResume> {
   const prompt = `${tailorContext(profile, app)}\n\nCANDIDATE'S ANSWERS TO CLARIFYING QUESTIONS:\n${qaLines(app, answers)}`;
-  return tailor(llm, profile, prompt, groundingSource(profile, Object.values(answers)), onStep);
+  return tailor(llm, profile, prompt, Object.values(answers), onStep);
 }
 
 // Free-text feedback on the current resume, e.g. "lead with the Pub/Sub work".
@@ -112,7 +114,7 @@ export async function reviseResume(
     `CURRENT RESUME:\n${JSON.stringify(app.resume, null, 2)}`,
     `REVISION REQUEST (change only what this asks, keep the rest):\n${feedback}`,
   ].join("\n\n");
-  return tailor(llm, profile, prompt, groundingSource(profile, [...Object.values(app.answers ?? {}), feedback]), onStep);
+  return tailor(llm, profile, prompt, [...Object.values(app.answers ?? {}), feedback], onStep);
 }
 
 // A plain-text cover letter: drafted with the humanizing rules already in the prompt, then
@@ -179,6 +181,8 @@ function tailorContext(profile: Profile, app: ApplicationContext): string {
     `JOB POSTING (structured):\n${JSON.stringify(app.job)}`,
     `GAP ANALYSIS:\n${JSON.stringify(compactFit(app.fit))}`,
     `CANDIDATE PROFILE:\n${profileContext(profile)}`,
+    `YEARS OF EXPERIENCE (from the role dates, gaps left out, overlapping roles counted once): ${careerYears(profile)}`,
+    `AVAILABILITY:\n${profile.availability || "(none)"}`,
     `VOICE SAMPLE:\n${style.voice_sample || "(none)"}`,
     `NEVER MENTION: ${style.avoid_mentioning.join("; ") || "(nothing)"}`,
     `INCLUDE IF RELEVANT: ${style.always_include_if_relevant.join("; ") || "(nothing)"}`,
@@ -194,7 +198,7 @@ async function tailor(
   llm: LlmPort,
   profile: Profile,
   prompt: string,
-  source: string,
+  said: string[],
   onStep: OnStep,
 ): Promise<TailoredResume> {
   onStep(0);
@@ -206,7 +210,7 @@ async function tailor(
   });
 
   onStep(1);
-  const problems = resumeProblems(resume, source);
+  const problems = resumeProblems(resume, profile, said);
   if (problems.length > 0) {
     resume = await llm.generateObject({
       tier: "write",
@@ -218,20 +222,73 @@ async function tailor(
   return cleanResume(profile, resume);
 }
 
-// What code can catch in a draft: banned words and cliches, bullets that open with a duty, and invented numbers.
-function resumeProblems(r: TailoredResume, source: string): string[] {
+// What code can catch in a draft: banned words and cliches, bullets that open with a duty, invented
+// numbers, and tools or claims a bullet adds that its own role or project never states.
+function resumeProblems(r: TailoredResume, profile: Profile, said: string[]): string[] {
   const problems: string[] = [];
   const tells = findResumeTells(resumeText(r));
   if (tells.length > 0) problems.push(`Banned words and cliches to replace: ${tells.join(", ")}`);
   const openers = findWeakOpeners(bulletsOf(r));
   if (openers.length > 0) problems.push(`Bullets open with a weak verb, start with a strong one: ${openers.join(", ")}`);
-  const invented = findUngroundedNumbers(bulletsOf(r), source);
+  const years = careerYears(profile);
+  const invented = findUngroundedNumbers([r.summary, ...bulletsOf(r)], `${groundingSource(profile, said)}\n${years}`);
   if (invented.length > 0) {
     problems.push(
       `Numbers not in the profile or the candidate's answers, remove them or use what the profile says: ${invented.join(", ")}`,
     );
   }
+  // A recruiter counts the dates on the page, so a claim must match the roles kept, not the whole profile.
+  const shown = yearsOfExperience(
+    r.work.flatMap((w) => profile.experience[w.experienceIndex] ?? []),
+    new Date(),
+  );
+  const claimed = yearsClaimed(r.summary).filter((n) => n !== shown);
+  if (claimed.length > 0) {
+    problems.push(
+      shown < years
+        ? `The summary claims ${claimed.join(", ")} years, but the roles on this resume only cover ${shown} (all roles give ${years}). Keep the older roles with 2-3 bullets each so the dates add up to ${years}, or say ${shown}.`
+        : `The summary claims ${claimed.join(", ")} years, the role dates give ${years}. Use ${years} or ${years}+.`,
+    );
+  }
+  const status = findUngroundedClaims(r.availability ?? "", profile.availability, WORK_STATUS_PHRASES);
+  if (status.length > 0) {
+    problems.push(`The availability line claims what the candidate never said, remove it: ${status.join(", ")}`);
+  }
+  const added = addedDetails(r, profile, said);
+  if (added.length > 0) {
+    problems.push(
+      `Details the bullet's own role or project does not state, remove them or use only what that highlight says: ${added.join("; ")}`,
+    );
+  }
   return problems;
+}
+
+// Each bullet may only name tools and claims found in the role or project it belongs to
+// (or in what the candidate said), not ones borrowed from elsewhere in the profile.
+function addedDetails(r: TailoredResume, profile: Profile, said: string[]): string[] {
+  const found: string[] = [];
+  const check = (label: string, bullets: string[], own: string) => {
+    const source = [own, ...said].join("\n");
+    for (const bullet of bullets) {
+      for (const detail of [...findUnbackedTerms(bullet, source), ...findUngroundedClaims(bullet, source)]) {
+        found.push(`"${detail}" in ${label}`);
+      }
+    }
+  };
+  for (const w of r.work) {
+    const role = profile.experience[w.experienceIndex];
+    if (role) check(role.company, w.bullets, role.highlights.join("\n"));
+  }
+  for (const p of r.projects) {
+    const project = profile.projects[p.projectIndex];
+    if (project) check(project.name, p.bullets, [project.description, ...project.tech, ...project.highlights].join("\n"));
+  }
+  return [...new Set(found)];
+}
+
+// Computed from the dates, not taken from the profile's summary, so the resume can't claim more than it shows.
+function careerYears(profile: Profile): number {
+  return yearsOfExperience(profile.experience, new Date());
 }
 
 function bulletsOf(r: TailoredResume): string[] {
@@ -269,6 +326,7 @@ export function cleanResume(profile: Profile, r: TailoredResume): TailoredResume
     work: work.map((w) => ({ ...w, bullets: w.bullets.map(clean) })),
     projects: projects.map((p) => ({ ...p, bullets: p.bullets.map(clean) })),
     skills: r.skills.map((s) => ({ category: clean(s.category), items: s.items.map(clean) })),
+    availability: clean(r.availability ?? ""),
     decisions: r.decisions,
   };
 }
