@@ -21,6 +21,7 @@ import { MissingKeywords } from "./missingKeywords";
 import { RequirementsList } from "./requirementsList";
 import { ResumeCoverage } from "./resumeCoverage";
 import { ScoreCard } from "./scoreCard";
+import { TypEditor } from "./typEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -283,12 +284,28 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
           {generated ? (
             <>
               <Card id="resume-viewer" className="scroll-mt-24">
-                <SectionHeader title="Tailored resume" />
+                <SectionHeader
+                  title="Tailored resume"
+                  description={
+                    app.typEditedAt
+                      ? "You edited the Typst source by hand. Coverage and \u201cWhat changed\u201d below describe the AI version."
+                      : undefined
+                  }
+                  aside={app.typEditedAt ? <Badge tone="warn">Manually edited</Badge> : undefined}
+                />
                 {preview ? (
                   <>
                     <ResumeViewer id={app.id} pages={preview.pages.length} version={preview.version} />
                     <ScrollToResult key={preview.version} applicationId={app.id} targetId="resume-viewer" />
                   </>
+                ) : null}
+                {app.typSource ? (
+                  <details className="border-t border-line pt-4">
+                    <summary className="cursor-pointer text-sm text-muted hover:text-ink">Edit Typst source</summary>
+                    <div className="pt-4">
+                      <TypEditor id={app.id} source={app.typSource} />
+                    </div>
+                  </details>
                 ) : null}
                 <p className="font-mono text-xs text-faint">{fileName}</p>
                 <p className="text-xs text-faint">
@@ -326,13 +343,17 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
               ) : null}
 
               <Card>
-                {userProfile ? <ReviseForm id={app.id} profile={userProfile} app={context} /> : <NeedsProfile />}
+                {userProfile ? <ReviseForm id={app.id} profile={userProfile} app={context} edited={!!app.typEditedAt} /> : <NeedsProfile />}
                 <details className="border-t border-line pt-4">
                   <summary className="cursor-pointer text-sm text-muted hover:text-ink">
                     Change your answers and regenerate
                   </summary>
                   <div className="pt-4">
-                    {userProfile ? <QuestionsForm id={app.id} profile={userProfile} app={context} /> : <NeedsProfile />}
+                    {userProfile ? (
+                      <QuestionsForm id={app.id} profile={userProfile} app={context} edited={!!app.typEditedAt} />
+                    ) : (
+                      <NeedsProfile />
+                    )}
                   </div>
                 </details>
               </Card>

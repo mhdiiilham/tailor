@@ -20,13 +20,18 @@ function useScrollAfterSuccess(error: string | undefined) {
   }, [error]);
 }
 
-type Props = { id: number; profile: Profile; app: ApplicationContext };
+// `edited`: the Typst source was changed by hand, and an AI result would replace it.
+type Props = { id: number; profile: Profile; app: ApplicationContext; edited?: boolean };
 
-export function QuestionsForm({ id, profile, app }: Props) {
+const keepsManualEdits = (edited?: boolean) =>
+  !edited || confirm("This rebuilds the resume and replaces your manual Typst edits. Continue?");
+
+export function QuestionsForm({ id, profile, app, edited }: Props) {
   const { run, running, step, error } = useAiTask();
   useScrollAfterSuccess(error);
 
   function submit(form: HTMLFormElement) {
+    if (!keepsManualEdits(edited)) return;
     const answers: Answers = {};
     for (const [name, value] of new FormData(form).entries()) {
       if (name.startsWith("q:")) answers[name.slice(2)] = String(value);
@@ -79,13 +84,14 @@ const SUGGESTIONS = [
   "Mirror the job description's wording more closely",
 ];
 
-export function ReviseForm({ id, profile, app }: Props) {
+export function ReviseForm({ id, profile, app, edited }: Props) {
   const { run, running, step, error, notice } = useAiTask();
   const feedback = useRef<HTMLTextAreaElement>(null);
   useScrollAfterSuccess(error);
 
   function submit() {
     const request = feedback.current?.value.trim() ?? "";
+    if (request && !keepsManualEdits(edited)) return;
     run(async (llm, onStep) => {
       if (!request) return { error: "Say what you want changed." };
       requestScrollToResult(id);
