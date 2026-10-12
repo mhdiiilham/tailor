@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { ProfileSchema } from "@/domain/profile";
-import { TypstResumeRenderer } from "./typstRenderer";
+import { TypstCompileError, TypstResumeRenderer } from "./typstRenderer";
 
 const hasTypst = (() => {
   try {
@@ -53,5 +53,17 @@ describe.skipIf(!hasTypst)("TypstResumeRenderer", () => {
     const pages = await renderer.previewPages(typSource);
     expect(pages).toHaveLength(1);
     expect(pages[0].subarray(1, 4).toString()).toBe("PNG");
+  });
+
+  it("reports compile errors against resume.typ, without the temp folder", async () => {
+    const err = await new TypstResumeRenderer().compile("= Hi\n#unknown-fn()").catch((e) => e);
+    expect(err).toBeInstanceOf(TypstCompileError);
+    expect(err.message).toMatch(/resume\.typ:2:/);
+    expect(err.message).not.toContain("tailor-");
+  });
+
+  it("cannot read files outside its temp folder", async () => {
+    const err = await new TypstResumeRenderer().compile('#read("/etc/passwd")').catch((e) => e);
+    expect(err).toBeInstanceOf(TypstCompileError);
   });
 });

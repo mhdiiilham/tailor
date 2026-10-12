@@ -10,6 +10,11 @@ const run = promisify(execFile);
 
 // Sharp on high-density screens without making each page image huge.
 const PREVIEW_PPI = 144;
+// The source can be hand-written, so a compile that loops forever is cut off.
+const COMPILE_TIMEOUT_MS = 30_000;
+
+// A compile that failed on the source itself; the message is Typst's own, safe to show.
+export class TypstCompileError extends Error {}
 
 // Compiles in a throwaway temp folder and returns the bytes; nothing stays on disk.
 export class TypstResumeRenderer implements ResumeRenderer {
@@ -21,31 +26,42 @@ export class TypstResumeRenderer implements ResumeRenderer {
   }
 
   async compile(typSource: string): Promise<Buffer> {
-    return this.inTempDir(typSource, async (dir, typPath) => {
-      const pdfPath = path.join(dir, "resume.pdf");
-      await run(this.typstBin, ["compile", typPath, pdfPath]);
-      return readFile(pdfPath);
+    return this.inTempDir(typSource, async (dir) => {
+      await this.typst(dir, "resume.pdf");
+      return readFile(path.join(dir, "resume.pdf"));
     });
   }
 
   // One PNG per page, in order, for the on-screen preview.
   async previewPages(typSource: string): Promise<Buffer[]> {
-    return this.inTempDir(typSource, async (dir, typPath) => {
-      await run(this.typstBin, ["compile", "--format", "png", "--ppi", String(PREVIEW_PPI), typPath, path.join(dir, "page-{0p}.png")]);
+    return this.inTempDir(typSource, async (dir) => {
+      await this.typst(dir, "page-{0p}.png", ["--format", "png", "--ppi", String(PREVIEW_PPI)]);
       const pages = (await readdir(dir)).filter((f) => f.startsWith("page-") && f.endsWith(".png")).sort();
       return Promise.all(pages.map((f) => readFile(path.join(dir, f))));
     });
   }
 
-  private async inTempDir<T>(typSource: string, work: (dir: string, typPath: string) => Promise<T>): Promise<T> {
-    const dir = await mkdtemp(path.join(tmpdir(), "tailor-"));
-    const typPath = path.join(dir, "resume.typ");
+  // Runs from inside the temp folder, which is also the root: files outside it can't be read,
+  // and errors name "resume.typ" rather than the temp path.
+  private async typst(dir: string, output: string, flags: string[] = []): Promise<void> {
     try {
-      await writeFile(typPath, typSource, "utf8");
-      return await work(dir, typPath);
+      await run(this.typstBin, ["compile", "--root", ".", ...flags, "resume.typ", output], {
+        cwd: dir,
+        timeout: COMPILE_TIMEOUT_MS,
+      });
     } catch (err) {
-      const stderr = (err as { stderr?: string }).stderr ?? String(err);
-      throw new Error(`typst compile failed:\n${stderr}`);
+      const { stderr, killed } = err as { stderr?: string; killed?: boolean };
+      if (killed) throw new TypstCompileError("Typst took too long to compile this. Check for an endless loop.");
+      if (stderr) throw new TypstCompileError(stderr.replaceAll(dir, ".").trim());
+      throw err;
+    }
+  }
+
+  private async inTempDir<T>(typSource: string, work: (dir: string) => Promise<T>): Promise<T> {
+    const dir = await mkdtemp(path.join(tmpdir(), "tailor-"));
+    try {
+      await writeFile(path.join(dir, "resume.typ"), typSource, "utf8");
+      return await work(dir);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
