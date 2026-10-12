@@ -12,6 +12,7 @@ const app = (over: Partial<Application>): Application =>
     userId: "alice",
     company: "Acme",
     typSource: "= cv",
+    typEditedAt: null,
     pdf: null,
     pdfCreatedAt: null,
     stage: "not_applied",

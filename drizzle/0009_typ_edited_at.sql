@@ -1,0 +1,1 @@
+ALTER TABLE "applications" ADD COLUMN "typ_edited_at" timestamp with time zone;

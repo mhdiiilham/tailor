@@ -104,6 +104,8 @@ export const applications = pgTable("applications", {
   answers: jsonb("answers").$type<Answers>(),
   resume: jsonb("resume").$type<TailoredResume>(),
   typSource: text("typ_source"),
+  // Set when the person edits the Typst source by hand; cleared when the AI rebuilds it.
+  typEditedAt: ts("typ_edited_at"),
   pdf: bytea("pdf"),
   // When the stored PDF was made; it's deleted after PDF_RETENTION_MS.
   pdfCreatedAt: ts("pdf_created_at"),

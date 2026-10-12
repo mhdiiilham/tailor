@@ -20,6 +20,8 @@ export type Application = {
   answers: Answers | null;
   resume: TailoredResume | null;
   typSource: string | null;
+  // Set when the person edits the Typst source by hand; cleared when the AI rebuilds it.
+  typEditedAt: Date | null;
   pdf: Buffer | null;
   pdfCreatedAt: Date | null;
   // Plain text, ready to paste. Null until the user asks for one.

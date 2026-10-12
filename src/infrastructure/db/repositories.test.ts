@@ -45,6 +45,7 @@ const newApp = (userId: string): NewApplication => ({
   answers: null,
   resume: null,
   typSource: null,
+  typEditedAt: null,
   pdf: null,
   pdfCreatedAt: null,
   coverLetter: null,
@@ -88,10 +89,12 @@ describe("DrizzleApplicationRepository", () => {
       answers: { lead: "Go" },
       pdf: Buffer.from("%PDF-1.7"),
       typSource: "= hi",
+      typEditedAt: new Date("2026-10-04T12:00:00Z"),
       status: "generated",
     });
     expect(updated.answers).toEqual({ lead: "Go" });
     expect(updated.pdf?.toString()).toBe("%PDF-1.7");
+    expect((await repo.findById("alice", created.id))?.typEditedAt).toEqual(new Date("2026-10-04T12:00:00Z"));
   });
 
   it("never shows one user's applications to another", async () => {
