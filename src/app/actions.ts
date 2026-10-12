@@ -14,6 +14,7 @@ import {
 import { getAuth } from "@/infrastructure/auth/auth";
 import { getCurrentUser, requireUser } from "@/infrastructure/auth/session";
 import { parseProfileYaml } from "@/infrastructure/profileYaml";
+import { TypstCompileError } from "@/infrastructure/typst/typstRenderer";
 import { parseStageFilter, StageSchema } from "@/domain/stage";
 import { loadRowPage } from "./dashboard/load";
 import { loadHnPage } from "./jobs/load";
@@ -22,7 +23,7 @@ import type { RowPage } from "./dashboard/rows";
 
 export type ActionState = { error?: string; notice?: string };
 
-const KNOWN_ERRORS = [NoProfileError, NotFoundError];
+const KNOWN_ERRORS = [NoProfileError, NotFoundError, TypstCompileError];
 
 // Turns any failure into text for the page. These actions never receive the Gemini key:
 // the browser calls Google itself and only sends the results here.
@@ -98,6 +99,18 @@ export async function saveResume(id: number, input: unknown): Promise<ActionStat
   const user = await requireUser();
   try {
     await applicationServiceFor(user.id).saveResume(id, input);
+  } catch (err) {
+    return { error: describe(err) };
+  }
+  refresh();
+  return {};
+}
+
+// A hand-edited Typst source. Compile errors come back as Typst's own message.
+export async function saveTypSource(id: number, typSource: unknown): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await applicationServiceFor(user.id).saveTypSource(id, { typSource });
   } catch (err) {
     return { error: describe(err) };
   }

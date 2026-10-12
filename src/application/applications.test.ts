@@ -92,6 +92,8 @@ class MemoryApplications implements ApplicationRepository {
 
 class RecordingRenderer implements ResumeRenderer {
   rendered: TailoredResume[] = [];
+  compiled: string[] = [];
+  failCompile = false;
   async render({ resume }: { resume: TailoredResume }) {
     this.rendered.push(resume);
     return { typSource: "= cv", pdf: Buffer.from("%PDF") };
@@ -99,8 +101,10 @@ class RecordingRenderer implements ResumeRenderer {
   async previewPages() {
     return [Buffer.from("png")];
   }
-  async compile() {
-    return Buffer.from("%PDF");
+  async compile(typSource: string) {
+    if (this.failCompile) throw new Error("resume.typ:1:1: error: unknown variable");
+    this.compiled.push(typSource);
+    return Buffer.from(`%PDF ${typSource}`);
   }
 }
 
@@ -213,6 +217,57 @@ describe("ApplicationService.saveResume", () => {
       renderer: new RecordingRenderer(),
     });
     await expect(bob.saveResume(app.id, { resume })).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("ApplicationService.saveTypSource", () => {
+  async function generated() {
+    const ctx = setup();
+    const app = await ctx.service.create(analysis);
+    await ctx.service.saveResume(app.id, { resume });
+    return { ...ctx, id: app.id };
+  }
+
+  it("compiles the hand-edited source and saves it, leaving the resume data alone", async () => {
+    const { service, renderer, id } = await generated();
+
+    const done = await service.saveTypSource(id, { typSource: "  = Edited cv\n" });
+
+    expect(renderer.compiled).toEqual(["= Edited cv"]);
+    expect(done).toMatchObject({ typSource: "= Edited cv", status: "generated", resume: { summary: "Backend engineer, Go." } });
+    expect(done.pdf?.toString()).toBe("%PDF = Edited cv");
+    expect(done.pdfCreatedAt).toEqual(new Date("2026-10-04T12:00:00Z"));
+    expect(done.typEditedAt).toEqual(new Date("2026-10-04T12:00:00Z"));
+  });
+
+  it("keeps the stored source when the new one doesn't compile", async () => {
+    const { service, renderer, applications, id } = await generated();
+    renderer.failCompile = true;
+
+    await expect(service.saveTypSource(id, { typSource: "#oops" })).rejects.toThrow(/unknown variable/);
+
+    expect(applications.rows[0]).toMatchObject({ typSource: "= cv", typEditedAt: null });
+  });
+
+  it("rejects empty or oversized source", async () => {
+    const { service, id } = await generated();
+    await expect(service.saveTypSource(id, { typSource: "  " })).rejects.toThrow();
+    await expect(service.saveTypSource(id, { typSource: "x".repeat(100_001) })).rejects.toThrow();
+  });
+
+  it("needs a generated resume first", async () => {
+    const { service } = setup();
+    const app = await service.create(analysis);
+    await expect(service.saveTypSource(app.id, { typSource: "= cv" })).rejects.toThrow(/resume/);
+  });
+
+  it("is replaced when the AI rebuilds the resume", async () => {
+    const { service, id } = await generated();
+    await service.saveTypSource(id, { typSource: "= Edited cv" });
+
+    const revised = await service.saveResume(id, { resume });
+
+    expect(revised).toMatchObject({ typSource: "= cv", typEditedAt: null });
   });
 });
 

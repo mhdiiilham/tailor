@@ -40,6 +40,10 @@ const SaveResumeInput = z.object({
   answers: z.record(z.string(), z.string().max(4_000)).optional(),
 });
 
+const SaveTypSourceInput = z.object({
+  typSource: z.string().trim().min(1, "The Typst source is empty.").max(100_000, "The Typst source is too long."),
+});
+
 const CoverLetterInput = z.string().trim().min(1, "The cover letter is empty.").max(20_000);
 
 const Notes = z
@@ -180,6 +184,21 @@ export class ApplicationService {
     return this.renderAndSave(app, profile, cleanResume(profile, parsed.resume), answers ? { answers } : {});
   }
 
+  // The person's own edit of the Typst source. It must compile before it replaces the stored one.
+  async saveTypSource(id: number, input: unknown): Promise<Application> {
+    const { typSource } = SaveTypSourceInput.parse(withinSize(input));
+    const app = await this.requireApplication(id);
+    if (!app.typSource) throw new Error("Generate the resume before editing its Typst source.");
+    const pdf = await this.deps.renderer.compile(typSource);
+    const now = this.now();
+    return this.deps.applications.update(this.deps.userId, app.id, {
+      typSource,
+      pdf,
+      pdfCreatedAt: now,
+      typEditedAt: now,
+    });
+  }
+
   async saveCoverLetter(id: number, text: unknown): Promise<Application> {
     const coverLetter = toPlainText(CoverLetterInput.parse(text));
     const app = await this.requireApplication(id);
@@ -187,7 +206,8 @@ export class ApplicationService {
     return this.deps.applications.update(this.deps.userId, app.id, { coverLetter });
   }
 
-  // The Typst source is always built here from the resume data, never taken from the browser.
+  // The AI path: the Typst source is built here from the resume data, never taken from the
+  // browser, and it replaces any hand edit (saveTypSource is the only way to send Typst).
   private async renderAndSave(
     app: Application,
     profile: Profile,
@@ -200,6 +220,7 @@ export class ApplicationService {
       ...patch,
       resume,
       typSource,
+      typEditedAt: null,
       pdf,
       pdfCreatedAt,
       status: "generated",
