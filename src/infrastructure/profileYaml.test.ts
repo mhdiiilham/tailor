@@ -11,6 +11,13 @@ describe("parseProfileYaml", () => {
     expect(profile.experience.length).toBeGreaterThan(0);
   });
 
+  it("keeps the notes on an experience entry", () => {
+    const yaml = `personal: {name: X}
+experience:
+  - {title: Dev, company: Co, start: "2020-01", end: present, notes: ["Title as written on the contract."]}`;
+    expect(parseProfileYaml(yaml).experience[0].notes).toEqual(["Title as written on the contract."]);
+  });
+
   it("rejects a malformed date", () => {
     const yaml = `personal: {name: X}\nexperience:\n  - {title: Dev, company: Co, start: "2020", end: present}`;
     expect(() => parseProfileYaml(yaml)).toThrow(/YYYY-MM/);

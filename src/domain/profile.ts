@@ -11,6 +11,7 @@ export const ExperienceSchema = z.object({
   start: yearMonth,
   end: z.union([yearMonth, z.literal("present")]),
   highlights: z.array(z.string()).default([]),
+  notes: z.array(z.string()).default([]),
 });
 
 export const ProjectSchema = z.object({
