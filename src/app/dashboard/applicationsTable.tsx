@@ -238,7 +238,11 @@ function Row({ row, onDeleted }: { row: ApplicationRow; onDeleted: (id: number) 
     <li className="grid gap-3 px-4 py-4 md:px-6 lg:grid-cols-[minmax(0,1fr)_110px_160px_120px_250px] lg:items-center lg:gap-4">
       <div className="grid min-w-0 gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <a href={`/applications/${row.id}`} className="truncate font-medium hover:text-accent">
+          <a
+            href={`/applications/${row.id}`}
+            title={row.role}
+            className="min-w-0 max-w-full truncate font-medium hover:text-accent"
+          >
             {row.role}
           </a>
           {row.location ? (
