@@ -1,4 +1,5 @@
 import { AI_VOCABULARY, BANNED_PHRASES, BANNED_WORDS } from "@/domain/writing";
+import { NOTES_RULE } from "./profileContext";
 
 // Adapted from the humanizer skill: its 24 AI-writing patterns plus its guidance on voice.
 // Shared by the draft prompt (so the first draft avoids them) and the fix prompt.
@@ -23,6 +24,7 @@ export const COVER_LETTER_SYSTEM = `You write a cover letter for a software engi
 
 Hard rules:
 - Use only facts from the candidate's profile, the tailored resume and their answers. Never invent experience, numbers, tools or reasons.
+- ${NOTES_RULE}
 - Plain text only: no bullet points, headings, markdown, greeting or sign-off. Return just the 3 or 4 body paragraphs.
 - No em dashes. Use commas, colons or parentheses.
 - Never use these words: ${[...BANNED_WORDS, ...AI_VOCABULARY].join(", ")}.

@@ -1,3 +1,5 @@
+import { NOTES_RULE } from "./profileContext";
+
 export const EXTRACT_JOB_SYSTEM = `You extract structured data from a pasted job description.
 Copy requirements and tech terms using the posting's exact wording. Do not invent anything that is not in the text.
 Split must-have qualifications into "requirements" and preferred ones into "niceToHaves". One qualification per item.
@@ -15,6 +17,7 @@ For every requirement, tech stack item and nice-to-have in the posting, mark it:
 Judge each tool once. A tool named in the posting's tech stack goes under techStack only; do not repeat it under requirements. Requirements are the other qualifications: years, kinds of experience, responsibilities.
 
 Only use what is written in the profile. Never assume skills that are not there.
+${NOTES_RULE}
 experienceLevel (0-100): how well seniority, years and domain match what the role signals.
 90-100: same level and scope. 70-89: close, one gap in years or scope. 50-69: a clear stretch, about a level away. Below 50: the wrong level.
 domainFit (0-100): how relevant the candidate's industries are to this company.
