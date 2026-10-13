@@ -18,6 +18,11 @@ experience:
     expect(parseProfileYaml(yaml).experience[0].notes).toEqual(["Title as written on the contract."]);
   });
 
+  it("keeps the notes about the whole profile", () => {
+    const yaml = `personal: {name: X}\nnotes: ["Never claim Kafka."]`;
+    expect(parseProfileYaml(yaml).notes).toEqual(["Never claim Kafka."]);
+  });
+
   it("rejects a malformed date", () => {
     const yaml = `personal: {name: X}\nexperience:\n  - {title: Dev, company: Co, start: "2020", end: present}`;
     expect(() => parseProfileYaml(yaml)).toThrow(/YYYY-MM/);

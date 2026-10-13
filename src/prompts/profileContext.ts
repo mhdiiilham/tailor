@@ -11,5 +11,6 @@ export function profileContext(p: Profile): string {
     education: p.education,
     skills: p.skills,
     certifications: p.certifications,
+    notes: p.notes,
   });
 }

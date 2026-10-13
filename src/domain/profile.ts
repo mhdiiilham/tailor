@@ -50,6 +50,7 @@ export const ProfileSchema = z.object({
   spoken_languages: z.array(z.string()).default([]),
   projects: z.array(ProjectSchema).default([]),
   certifications: z.array(z.string()).default([]),
+  notes: z.array(z.string()).default([]),
   writing_style: z
     .object({
       voice_sample: z.string().default(""),

@@ -132,6 +132,19 @@ export const PROFILE_GUIDE: GuideSection[] = [
     example: `certifications: ["AWS Certified Developer - Associate (2024)"]`,
   },
   {
+    key: "notes",
+    title: "Notes",
+    need: "Optional",
+    points: [
+      "Background facts and rules for Tailor, never printed on a resume.",
+      "Use it for things you have not done, so they are never claimed, and for context like where you learned a tool.",
+      "Each experience entry can have its own `notes` too, e.g. that the title is as written on the contract.",
+    ],
+    example: `notes:
+  - "Not done (never claim): Kafka, RabbitMQ."
+  - "Prisma: used on personal projects only."`,
+  },
+  {
     key: "writing_style",
     title: "Writing style",
     need: "Recommended",
