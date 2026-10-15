@@ -3,6 +3,7 @@ import {
   coverage,
   FitJudgementSchema,
   fitScore,
+  LOW_FIT_THRESHOLD,
   matchCounts,
   normalizeFit,
   type FitAnalysis,
@@ -84,5 +85,22 @@ describe("missingKeywords", () => {
   it("caps the list so small local models stay within their output budget", () => {
     const many = Array.from({ length: 11 }, (_, i) => ({ keyword: `k${i}`, support: "MISSING", whereToUse: "" }));
     expect(FitJudgementSchema.safeParse(judgement({ missingKeywords: many as never })).success).toBe(false);
+  });
+});
+
+describe("LOW_FIT_THRESHOLD", () => {
+  it("sits at 70, so only close matches are called good", () => {
+    expect(LOW_FIT_THRESHOLD).toBe(70);
+  });
+});
+
+describe("hiringRestriction", () => {
+  it("is optional, so analyses saved before it existed still parse", () => {
+    expect(FitJudgementSchema.safeParse(judgement()).success).toBe(true);
+  });
+
+  it("keeps the posting's limit on who can be hired", () => {
+    const restricted = judgement({ hiringRestriction: "Must have the right to work in the UK. No sponsorship." });
+    expect(FitJudgementSchema.parse(restricted).hiringRestriction).toMatch(/right to work in the UK/);
   });
 });

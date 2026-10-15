@@ -37,6 +37,13 @@ export const FitJudgementSchema = z.object({
   angles: z.array(AngleSchema).describe("The 2-3 profile achievements that best match this role"),
   blockers: z.array(z.string()).describe("Hard requirements the candidate clearly lacks"),
   // Optional: analyses saved before this existed don't have it.
+  hiringRestriction: z
+    .string()
+    .optional()
+    .describe(
+      "The posting's limit on where or who can be hired (right to work, no visa sponsorship, must live in a country or city, office days, time zone), quoted briefly. Empty if it states none.",
+    ),
+  // Optional: analyses saved before this existed don't have it.
   missingKeywords: z
     .array(MissingKeywordSchema)
     .max(10)
@@ -70,7 +77,8 @@ export function matchCounts(fit: FitAnalysis): Record<Match, number> {
   return counts;
 }
 
-export const LOW_FIT_THRESHOLD = 55;
+// Below this, the app asks whether the role is worth the application.
+export const LOW_FIT_THRESHOLD = 70;
 
 const WEIGHTS = {
   requirements: 0.4,
