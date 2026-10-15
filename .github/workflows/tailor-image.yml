@@ -44,6 +44,8 @@ jobs:
           # Add linux/arm64 here if your Coolify server is ARM.
           platforms: linux/amd64
           push: true
+          # Skips the attestation manifest, which ECR lists as an extra untagged image.
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
