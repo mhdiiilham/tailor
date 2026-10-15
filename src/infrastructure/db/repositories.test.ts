@@ -4,7 +4,7 @@ import { ProfileSchema } from "@/domain/profile";
 import type { Stage } from "@/domain/stage";
 import type { Db } from "./client";
 import { DrizzleAccountRepository, DrizzleApplicationRepository, DrizzleProfileRepository } from "./repositories";
-import { applications, user } from "./schema";
+import { applications, profiles, user } from "./schema";
 import { openTestDb } from "./testDb";
 
 const profile = ProfileSchema.parse({ personal: { name: "Ada" } });
@@ -76,6 +76,18 @@ describe("DrizzleProfileRepository", () => {
 
     expect((await repo.findByUser("alice"))?.profile.summary).toBe("updated");
     expect(await repo.findByUser("bob")).toBeNull();
+  });
+
+  it("reads a profile saved with plain-string highlights as detailed highlights", async () => {
+    const legacyProfile = {
+      personal: { name: "Ada" },
+      experience: [{ title: "Dev", company: "Co", start: "2020-01", end: "present", highlights: ["Cut latency 90%"] }],
+    };
+    await db.insert(profiles).values({ userId: "alice", data: legacyProfile as never, updatedAt: new Date() });
+
+    const stored = await new DrizzleProfileRepository(db).findByUser("alice");
+
+    expect(stored?.profile.experience[0].highlights).toEqual([{ text: "Cut latency 90%", themes: [] }]);
   });
 });
 

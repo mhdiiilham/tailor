@@ -9,7 +9,7 @@ import type {
 } from "@/domain/application";
 import { normalizeFit } from "@/domain/fit";
 import type { AccountRepository, ApplicationRepository, ProfileRepository, StoredProfile } from "@/domain/ports";
-import type { Profile } from "@/domain/profile";
+import { ProfileSchema, type Profile } from "@/domain/profile";
 import { stagesFor, type Stage } from "@/domain/stage";
 import type { Db } from "./client";
 import { containsPattern } from "./like";
@@ -20,7 +20,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
 
   async findByUser(userId: string): Promise<StoredProfile | null> {
     const [row] = await this.db.select().from(profiles).where(eq(profiles.userId, userId));
-    return row ? { profile: row.data, updatedAt: row.updatedAt } : null;
+    return row ? { profile: ProfileSchema.parse(row.data), updatedAt: row.updatedAt } : null;
   }
 
   async saveForUser(userId: string, profile: Profile): Promise<StoredProfile> {
