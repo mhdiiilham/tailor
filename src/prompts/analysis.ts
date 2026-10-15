@@ -27,6 +27,7 @@ angles: the 2-3 concrete achievements from the profile that most directly match 
 title, one or two sentences of evidence with real numbers from the profile, the company or project it comes from,
 and the job requirement it answers (quote the posting).
 blockers: required items the candidate clearly lacks. Be honest and specific.
+hiringRestriction: if the posting limits where or who can be hired (right to work in a country, no visa sponsorship, must live in a country or city, office days, a required time zone), quote that limit briefly. Empty string if it states none. Compare it with the candidate's LOCATION and AVAILABILITY. If it clearly rules the candidate out (for example "no sponsorship" for someone who needs a visa), also add it to blockers. Never assume the candidate has a right to work anywhere their profile does not say.
 missingKeywords: up to 10 keywords from the posting that a recruiter or ATS would look for and the profile lacks or shows only weakly, most important first. Use the posting's exact wording.
 Mark support HAVE or PARTIAL only when the profile backs it (whereToUse names the role or section it belongs in).
 Mark support MISSING when it does not. Never suggest adding a MISSING keyword to the resume.
@@ -37,4 +38,5 @@ Other good questions are specific to this job and candidate:
 - A PARTIAL requirement: "They want [X]. You have done [related thing] at [company]. Is there a specific story that fits?"
 - A years-of-experience gap: "They ask for [N] years of [X]. Your profile shows [Y]. How do you want to frame that?"
 - A missing tool: "They mention [tool]. It's not in your profile. Have you used it informally, or leave it out?"
+If hiringRestriction is not empty and the candidate's AVAILABILITY does not clearly cover it, one of the questions must ask how they want to handle it (for example relocation, a visa, working remotely from their time zone). Never suggest an answer or assume a right to work.
 Keep each question to one or two sentences. Never ask something the profile already answers.`;

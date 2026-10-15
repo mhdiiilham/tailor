@@ -4,11 +4,12 @@ import { coverLetterText, CoverLetterSchema, type CoverLetterDraft } from "@/dom
 import { FitJudgementSchema, fitScore, type FitAnalysis, type MatchedItem } from "@/domain/fit";
 import { JobPostingSchema, type JobPosting } from "@/domain/job";
 import type { LlmPort } from "@/domain/ports";
-import type { Profile } from "@/domain/profile";
+import { highlightsText, type Profile } from "@/domain/profile";
 import { FIXED_QUESTIONS, MAX_GAP_QUESTIONS, type Answers, type Question } from "@/domain/questions";
 import { TailoredResumeSchema, type TailoredResume } from "@/domain/resume";
 import { findUngroundedClaims, findUngroundedNumbers, WORK_STATUS_PHRASES } from "@/domain/grounding";
 import { resumeSearchText } from "@/domain/keywordCoverage";
+import { findLongBullets, skillsProblem } from "@/domain/resumeFit";
 import { findUnbackedTerms } from "@/domain/techTerms";
 import { yearsClaimed, yearsOfExperience } from "@/domain/years";
 import { findResumeTells, findWeakOpeners, findWritingTells, stripEmDashes, toPlainText } from "@/domain/writing";
@@ -66,7 +67,7 @@ export async function analyzeJob(
     temperature: JUDGE_TEMPERATURE,
     schema: FitAndQuestionsSchema,
     system: ANALYZE_FIT_SYSTEM,
-    prompt: `JOB POSTING (structured):\n${JSON.stringify(job, null, 2)}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
+    prompt: `JOB POSTING (structured):\n${JSON.stringify(job, null, 2)}\n\nLOCATION: ${profile.personal.location || "(not stated)"}\nAVAILABILITY:\n${profile.availability || "(none)"}\n\nCANDIDATE PROFILE:\n${profileYaml}`,
   });
   const fit = { ...judgement, score: fitScore(judgement) };
 
@@ -167,6 +168,7 @@ function compactFit(fit: FitAnalysis) {
     niceToHaves: marks(fit.niceToHaves),
     angles: fit.angles,
     blockers: fit.blockers,
+    hiringRestriction: fit.hiringRestriction ?? "",
     missingKeywords: fit.missingKeywords ?? [],
   };
 }
@@ -230,6 +232,14 @@ function resumeProblems(r: TailoredResume, profile: Profile, said: string[]): st
   if (tells.length > 0) problems.push(`Banned words and cliches to replace: ${tells.join(", ")}`);
   const openers = findWeakOpeners(bulletsOf(r));
   if (openers.length > 0) problems.push(`Bullets open with a weak verb, start with a strong one: ${openers.join(", ")}`);
+  const longBullets = findLongBullets(bulletsOf(r));
+  if (longBullets.length > 0) {
+    problems.push(
+      `Bullets longer than two lines, shorten each to its main result (use the highlight's short version if it has one): ${longBullets.join("; ")}`,
+    );
+  }
+  const crowdedSkills = skillsProblem(r.skills);
+  if (crowdedSkills) problems.push(crowdedSkills);
   const years = careerYears(profile);
   const invented = findUngroundedNumbers([r.summary, ...bulletsOf(r)], `${groundingSource(profile, said)}\n${years}`);
   if (invented.length > 0) {
@@ -277,11 +287,11 @@ function addedDetails(r: TailoredResume, profile: Profile, said: string[]): stri
   };
   for (const w of r.work) {
     const role = profile.experience[w.experienceIndex];
-    if (role) check(role.company, w.bullets, role.highlights.join("\n"));
+    if (role) check(role.company, w.bullets, highlightsText(role.highlights));
   }
   for (const p of r.projects) {
     const project = profile.projects[p.projectIndex];
-    if (project) check(project.name, p.bullets, [project.description, ...project.tech, ...project.highlights].join("\n"));
+    if (project) check(project.name, p.bullets, [project.description, ...project.tech, highlightsText(project.highlights)].join("\n"));
   }
   return [...new Set(found)];
 }

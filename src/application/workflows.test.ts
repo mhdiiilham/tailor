@@ -92,6 +92,16 @@ describe("analyzeJob", () => {
     expect(progress.seen).toEqual([0, 1]);
   });
 
+  it("shows the fit judge where the candidate lives and what they say about availability", async () => {
+    const llm = new FakeLlm([job, analysis([])]);
+    const based = { ...profile, availability: "Based in Lisbon. Remote only.", personal: { ...profile.personal, location: "Lisbon" } };
+
+    await analyzeJob(llm, based, "jd");
+
+    expect(llm.requests[1].prompt).toContain("AVAILABILITY:\nBased in Lisbon. Remote only.");
+    expect(llm.requests[1].prompt).toContain("LOCATION: Lisbon");
+  });
+
   it("reads the job on the fast model and judges the fit on the write model", async () => {
     const llm = new FakeLlm([job, analysis([])]);
 
@@ -264,6 +274,62 @@ describe("tailorResume", () => {
     await tailorResume(llm, profile, app, {});
 
     expect(llm.requests[1].prompt).toMatch(/"without downtime" in New Co/);
+  });
+
+  it("asks once more when a bullet runs past two lines", async () => {
+    const wordy = { ...resume, work: [{ experienceIndex: 0, bullets: [`Built queues ${"x".repeat(250)}`] }] };
+    const llm = new FakeLlm([wordy, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/Bullets longer than two lines.*Built queues/);
+  });
+
+  it("asks once more when the skills block is too long for one page", async () => {
+    const crowded = {
+      ...resume,
+      skills: Array.from({ length: 8 }, (_, i) => ({ category: `Area ${i}`, items: ["Go"] })),
+    };
+    const llm = new FakeLlm([crowded, resume]);
+
+    await tailorResume(llm, profile, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/Skills has 8 categories/);
+  });
+
+  it("accepts a tool that only the short version of the highlight states", async () => {
+    const withShort = ProfileSchema.parse({
+      ...profile,
+      experience: [
+        {
+          ...profile.experience[0],
+          highlights: [{ text: "Built queues for orders.", short: "Built Terraform-managed queues." }],
+        },
+        profile.experience[1],
+      ],
+    });
+    const short = { ...resume, work: [{ experienceIndex: 0, bullets: ["Built queues provisioned with Terraform"] }] };
+    const llm = new FakeLlm([short]);
+
+    await tailorResume(llm, withShort, app, {});
+
+    expect(llm.requests).toHaveLength(1);
+  });
+
+  it("still rejects a tool no version of the detailed highlight states", async () => {
+    const detailed = ProfileSchema.parse({
+      ...profile,
+      experience: [
+        { ...profile.experience[0], highlights: [{ text: "Built queues for orders.", impact: "high" }] },
+        profile.experience[1],
+      ],
+    });
+    const borrowed = { ...resume, work: [{ experienceIndex: 0, bullets: ["Built queues provisioned with Terraform"] }] };
+    const llm = new FakeLlm([borrowed, resume]);
+
+    await tailorResume(llm, detailed, app, {});
+
+    expect(llm.requests[1].prompt).toMatch(/"Terraform" in New Co/);
   });
 
   it("accepts a tool the candidate named in their answers", async () => {

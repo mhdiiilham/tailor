@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { stringify } from "yaml";
 import { profileRepository } from "@/container";
 import { PageHeader } from "@/components/ui";
+import { toEditableProfile } from "@/domain/profile";
 import { requireUser } from "@/infrastructure/auth/session";
 import { ProfileEditor } from "./editor";
 import { GuidePanel } from "./guidePanel";
@@ -34,7 +35,7 @@ export default async function ProfilePage() {
         }
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <ProfileEditor initialYaml={stored ? stringify(stored.profile, { lineWidth: 0 }) : PROFILE_TEMPLATE} />
+        <ProfileEditor initialYaml={stored ? stringify(toEditableProfile(stored.profile), { lineWidth: 0 }) : PROFILE_TEMPLATE} />
         <div className="min-w-0 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
           <GuidePanel />
         </div>

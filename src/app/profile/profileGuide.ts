@@ -54,6 +54,8 @@ export const PROFILE_GUIDE: GuideSection[] = [
       "Titles, companies and dates are copied to the resume exactly as written here.",
       "`highlights` are what every bullet is built from. One achievement per line, with a number or scale where you can (time saved, traffic, users, money).",
       "Write more highlights than fit on a page. Tailor picks the ones that match each job and leaves the rest out.",
+      "A highlight can be a plain line, or carry notes that help Tailor choose: `short` (a one-line version, about 100 characters, for tight pages), `impact` (`high`, `mid` or `low`: how strongly it shows your level) and `themes` (what it shows, like `performance` or `reliability`).",
+      "Keep each full highlight to two printed lines if you can. A bullet longer than that is cut down before it reaches the page.",
     ],
     example: `experience:
   - title: "Backend Engineer"
@@ -62,7 +64,10 @@ export const PROFILE_GUIDE: GuideSection[] = [
     start: "2022-03"
     end: "present"
     highlights:
-      - "Cut settlement reconciliation from 3 hours to 12 minutes by batching ledger queries."
+      - text: "Cut settlement reconciliation from 3 hours to 12 minutes by batching ledger queries."
+        short: "Cut reconciliation from 3 hours to 12 minutes."
+        impact: high
+        themes: [performance, fintech]
       - "Designed the retry and idempotency layer for payment webhooks."
   - title: "Software Engineer"
     company: "Previous Co"

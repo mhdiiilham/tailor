@@ -4,13 +4,29 @@ const yearMonth = z
   .string()
   .regex(/^\d{4}-\d{2}$/, "expected YYYY-MM");
 
+export const IMPACT_TIERS = ["high", "mid", "low"] as const;
+
+// A highlight is a plain sentence, or a sentence with notes that help the tailor
+// choose: a one-line version for tight pages, how much it matters, and what it shows.
+const DetailedHighlightSchema = z.object({
+  text: z.string().min(1),
+  short: z.string().min(1).optional(),
+  impact: z.enum(IMPACT_TIERS).optional(),
+  themes: z.array(z.string()).default([]),
+});
+
+export const HighlightSchema = z.union([
+  z.string().min(1).transform((text): z.output<typeof DetailedHighlightSchema> => ({ text, themes: [] })),
+  DetailedHighlightSchema,
+]);
+
 export const ExperienceSchema = z.object({
   title: z.string().min(1),
   company: z.string().min(1),
   location: z.string().default(""),
   start: yearMonth,
   end: z.union([yearMonth, z.literal("present")]),
-  highlights: z.array(z.string()).default([]),
+  highlights: z.array(HighlightSchema).default([]),
   notes: z.array(z.string()).default([]),
 });
 
@@ -19,7 +35,7 @@ export const ProjectSchema = z.object({
   description: z.string().default(""),
   url: z.string().default(""),
   tech: z.array(z.string()).default([]),
-  highlights: z.array(z.string()).default([]),
+  highlights: z.array(HighlightSchema).default([]),
   start: yearMonth.optional(),
   end: z.union([yearMonth, z.literal("present")]).optional(),
 });
@@ -60,6 +76,32 @@ export const ProfileSchema = z.object({
     .default({ voice_sample: "", avoid_mentioning: [], always_include_if_relevant: [] }),
 });
 
+// Both versions of every highlight: a bullet built from either one is grounded.
+export function highlightsText(highlights: Highlight[]): string {
+  return highlights.flatMap((h) => (h.short ? [h.text, h.short] : [h.text])).join("\n");
+}
+
+export type Highlight = z.output<typeof HighlightSchema>;
+
+// A highlight as written in profile.yaml: a bare string unless it carries extras.
+function toEditableHighlight({ text, short, impact, themes }: Highlight): string | Partial<Highlight> {
+  if (!short && !impact && themes.length === 0) return text;
+  return {
+    text,
+    ...(short ? { short } : {}),
+    ...(impact ? { impact } : {}),
+    ...(themes.length > 0 ? { themes } : {}),
+  };
+}
+
+// The profile shaped for people to read and edit (and for the model): plain highlights stay plain lines.
+export function toEditableProfile(profile: Profile) {
+  return {
+    ...profile,
+    experience: profile.experience.map((e) => ({ ...e, highlights: e.highlights.map(toEditableHighlight) })),
+    projects: profile.projects.map((p) => ({ ...p, highlights: p.highlights.map(toEditableHighlight) })),
+  };
+}
 export type Profile = z.infer<typeof ProfileSchema>;
 export type Experience = z.infer<typeof ExperienceSchema>;
 export type Project = z.infer<typeof ProjectSchema>;
