@@ -222,6 +222,16 @@ export default async function ApplicationPage({ params }: PageProps<"/applicatio
         }`}
       >
         <div id="match" className="grid scroll-mt-24 gap-6">
+          {fit.hiringRestriction?.trim() ? (
+            <Card className="border-danger/30">
+              <SectionHeader
+                title="Check this before you apply"
+                description="The posting limits who or where they can hire:"
+              />
+              <p className="text-sm">{fit.hiringRestriction}</p>
+            </Card>
+          ) : null}
+
           {fit.score < LOW_FIT_THRESHOLD && fit.blockers.length > 0 ? (
             <Card className="border-danger/30">
               <SectionHeader

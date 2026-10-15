@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button, ButtonAnchor, Skeleton } from "@/components/ui";
+import { pageCountNotice } from "@/domain/resumeFit";
 
 const ZOOM_STEPS = [60, 80, 100, 125, 150, 200];
 
@@ -21,8 +22,11 @@ export function ResumeViewer({ id, pages, version }: { id: number; pages: number
     if (i >= 0 && i < ZOOM_STEPS.length) setZoom(ZOOM_STEPS[i]);
   };
 
+  const notice = pageCountNotice(pages);
+
   return (
     <div className="grid gap-3">
+      {notice ? <p className="rounded-ui border border-danger/30 bg-sunken px-3 py-2 text-sm text-muted">{notice}</p> : null}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-ui border border-line bg-sunken px-2 py-1.5">
         <span className="px-1.5 font-mono text-xs text-faint">
           {pages} {pages === 1 ? "page" : "pages"}
